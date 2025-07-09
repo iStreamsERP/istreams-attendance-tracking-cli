@@ -194,3 +194,6 @@ export const ImageRecognition = async (
         setRecogLoading(false);
     }
 };
+
+
+// Trash
