@@ -196,4 +196,4 @@ export const ImageRecognition = async (
 };
 
 
-// Trash
+// Trash 2
