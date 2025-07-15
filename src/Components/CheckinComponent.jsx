@@ -7,6 +7,8 @@ import { LocationService } from '../Logics/LocationService';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import ProjectListPopup from '../Modal/ProjectListPopUp';
 import { formatDate, formatTime } from '../Utils/dataTimeUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const CheckinComponent = ({
     entryDate,
@@ -23,9 +25,44 @@ const CheckinComponent = ({
     locationName,
     setLocationName,
     onProjectSelect,
+    selectedLocation,
+    setProjectName,
+    setProjectNo
 }) => {
     const [isPopupVisible, setPopupVisible] = useState(false);
     const [address, setAddress] = useState('');
+
+    useEffect(() => {
+        const loadOrUpdateLocation = async () => {
+            try {
+                let locationFromParams = selectedLocation;
+
+                if (locationFromParams) {
+                    // Save new value if different from stored
+                    const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                    if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
+                        await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
+                        console.log('Stored new location:', locationFromParams);
+                    }
+                }
+
+                // Load final location from storage (which is either the newly saved one or the existing one)
+                const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                const location = finalStored ? JSON.parse(finalStored) : null;
+
+                console.log('Using location:', location);
+
+                const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
+                setProjectNo(projectNo);
+                setProjectName(projectName);
+
+            } catch (error) {
+                console.error('Error handling location storage:', error);
+            }
+        };
+
+        loadOrUpdateLocation();
+    }, []);
 
     useEffect(() => {
         LocationService(setLocationName, setCoordinates, setAddress)
@@ -77,15 +114,15 @@ const CheckinComponent = ({
                     value={projectNo}
                     style={{ width: '70%', marginTop: 5 }}
                     placeholder="Enter Project No"
-                    showSoftInputOnFocus={false} />
-                <ProjectListPopup
+                    editable={false} />
+                {/* <ProjectListPopup
                     visible={isPopupVisible}
                     onClose={() => setPopupVisible(false)}
                     onSelect={(project) => {
                         onProjectSelect(project);
                         setPopupVisible(false);
                     }}
-                />
+                /> */}
                 <TextInput
                     mode="outlined"
                     label="Project Name"

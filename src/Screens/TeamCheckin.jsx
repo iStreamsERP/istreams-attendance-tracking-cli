@@ -3,7 +3,7 @@ import { View, Alert } from 'react-native';
 import { Button } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
 import Header from '../Components/Header';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import CheckinComponent from '../Components/CheckinComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -11,6 +11,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 const TeamCheckin = ({ route }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { selectedLocation } = route.params || {};
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
     const [projectNo, setProjectNo] = useState('');
@@ -87,7 +88,10 @@ const TeamCheckin = ({ route }) => {
                 setCoordinates={setCoordinates}
                 locationName={locationName}
                 setLocationName={setLocationName}
-                onProjectSelect={handleProjectSelect} />
+                onProjectSelect={handleProjectSelect}
+                selectedLocation = {selectedLocation}
+                setProjectNo={setProjectNo}
+                setProjectName={setProjectName} />
 
             <View style={GlobalStyles.bottomButtonContainer}>
                 <Button mode="contained" onPress={handlenavToEmpPage}>

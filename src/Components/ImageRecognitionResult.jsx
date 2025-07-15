@@ -14,6 +14,8 @@ const ImageRecognitionResult = ({ recogloading, groupedData }) => {
     const navigation = useNavigation();
 
     const handleAddEmployee = () => {
+        console.log('Adding employee...');
+        
         navigation.navigate('UpdateNonMatchedEmpScreen');
     };
 
@@ -37,7 +39,7 @@ const ImageRecognitionResult = ({ recogloading, groupedData }) => {
                         <EmployeeListCard
                             loading={false}
                             selectedEmp={[item]}
-                            onPress={section.title === 'Non-Matched Faces' ? () => handleAddEmployee() : null}
+                            onPress={section.title === 'Non-Matched Employee' ? () => handleAddEmployee() : null}
                         />
                     )}
                 />

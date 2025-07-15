@@ -82,6 +82,11 @@ export const GlobalStyles = StyleSheet.create({
         fontFamily: 'Inter-Regular',
         color: '#000',
     },
+    content1: {
+        fontSize: 15,
+        fontFamily: 'Inter-SemiBold',
+        color: '#000',
+    },
     small_text: {
         fontSize: 12,
         fontFamily: 'Inter-Regular',

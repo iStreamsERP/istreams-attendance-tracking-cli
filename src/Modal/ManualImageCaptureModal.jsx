@@ -1,4 +1,3 @@
-// components/ManualImageCaptureModal.js
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Modal,
@@ -18,13 +17,13 @@ import {
 } from "react-native-vision-camera";
 import { compressImage } from "../Utils/UriToBase64Utils";
 import RNFS from 'react-native-fs';
+import { GlobalStyles } from "../Styles/styles";
+import LottieView from "lottie-react-native";
 
 const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
     const [isActive, setIsActive] = useState(true);
-    const [isCameraInitialized, setIsCameraInitialized] = useState(false);
     const [cameraPosition, setCameraPosition] = useState('back');
     const [capturedImage, setCapturedImage] = useState(null);
-    const [debugInfo, setDebugInfo] = useState('Initializing...');
     const [isCapturing, setIsCapturing] = useState(false);
 
     const cameraRef = useRef(null);
@@ -56,20 +55,9 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
 
             const originalUri = `file://${photo.path}`;
 
-            const compressedUri = await compressImage(originalUri);
+            const rotationAngle = 0;
 
-            //console.log('Compressed URI:', compressedUri);
-
-            // try {
-            //     const originalStats = await RNFS.stat(originalUri);
-            //     const compressedStats = await RNFS.stat(compressedUri);
-            //     console.log('Original size:', Math.round(originalStats.size / 1024), 'KB');
-            //     console.log('Compressed size:', Math.round(compressedStats.size / 1024), 'KB');
-            //     const compressionRatio = ((1 - compressedStats.size / originalStats.size) * 100);
-            //     console.log('Size reduction:', compressionRatio.toFixed(1) + '%');
-            // } catch (e) {
-            //     console.warn('Failed to get file stats:', e.message);
-            // }
+            const compressedUri = await compressImage(originalUri, rotationAngle);
 
             setCapturedImage(compressedUri);
 
@@ -141,15 +129,25 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
                                 photo={true}
                             />
                         )}
+                        <View style={[GlobalStyles.twoInputContainer, styles.rotateControl]}>
+                            <LottieView
+                                source={require('../../assets/animations/rotate_phone.json')}
+                                style={{ width: 70, height: 70 }}
+                                autoPlay
+                                loop
+                            />
+                            <Text style={[GlobalStyles.subtitle, { color: '#FFF' }]}>Rotate Your Mobile to Capture</Text>
+                        </View>
+
                         <View style={styles.controlsContainer}>
                             <TouchableOpacity onPress={toggleCamera} style={styles.controlButton}>
-                                <Text style={styles.controlText}>🔄 Flip</Text>
+                                <Text style={[GlobalStyles.subtitle, { color: '#FFF' }]}>🔄 Flip</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleCapture} style={styles.captureButton}>
                                 <View style={styles.captureButtonInner} />
                             </TouchableOpacity>
                             <TouchableOpacity onPress={onClose} style={styles.controlButton}>
-                                <Text style={styles.controlText}>✖ Close</Text>
+                                <Text style={[GlobalStyles.subtitle, { color: 'red' }]}>✖ Close</Text>
                             </TouchableOpacity>
                         </View>
                     </>
@@ -166,71 +164,10 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
+    rotateControl: {
         alignItems: 'center',
-        backgroundColor: '#000',
-    },
-    loadingText: {
-        color: '#FFF',
-        marginTop: 16,
-        fontSize: 16,
-    },
-    debugText: {
-        color: '#FFF',
-        fontSize: 12,
-        marginTop: 8,
-        textAlign: 'center',
-        paddingHorizontal: 20,
-    },
-    permissionContainer: {
-        flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#000',
-    },
-    permissionText: {
-        color: '#FFF',
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    permissionButton: {
-        backgroundColor: '#1C6758',
-        paddingHorizontal: 30,
-        paddingVertical: 15,
-        borderRadius: 8,
-    },
-    permissionButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    errorText: {
-        color: '#FF4444',
-        fontSize: 16,
-        textAlign: 'center',
-    },
-    cameraContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    statusContainer: {
-        position: 'absolute',
-        top: 50,
-        alignSelf: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-    },
-    statusText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFF',
-        textAlign: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     controlsContainer: {
         position: 'absolute',
@@ -248,11 +185,6 @@ const styles = StyleSheet.create({
         minWidth: 80,
         alignItems: 'center',
     },
-    controlText: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
     captureButton: {
         width: 70,
         height: 70,
@@ -263,18 +195,11 @@ const styles = StyleSheet.create({
         borderWidth: 3,
         borderColor: '#FFF',
     },
-    captureButtonDisabled: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderColor: '#888',
-    },
     captureButtonInner: {
         width: 50,
         height: 50,
         borderRadius: 25,
         backgroundColor: '#FFF',
-    },
-    captureButtonInnerDisabled: {
-        backgroundColor: '#888',
     },
     previewContainer: {
         flex: 1,
@@ -284,22 +209,6 @@ const styles = StyleSheet.create({
     previewImage: {
         width: '100%',
         height: '80%',
-    },
-    closePreviewButton: {
-        position: 'absolute',
-        top: 40,
-        right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closePreviewText: {
-        color: '#FFF',
-        fontSize: 20,
-        fontWeight: 'bold',
     },
     previewControls: {
         position: 'absolute',
@@ -326,52 +235,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
-    successModalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    successModal: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 30,
-        width: '80%',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    successIcon: {
-        fontSize: 60,
-        marginBottom: 20,
-    },
-    successTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1C6758',
-        marginBottom: 10,
-    },
-    successMessage: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    successModalButton: {
-        backgroundColor: '#1C6758',
-        paddingHorizontal: 30,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    successModalButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    }
 });

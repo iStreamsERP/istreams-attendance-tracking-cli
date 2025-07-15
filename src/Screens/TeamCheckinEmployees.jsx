@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Text, View, StyleSheet, FlatList, Alert, Image, Dimensions } from 'react-native';
 import { Button } from 'react-native-paper';
 import Header from '../Components/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { callSoapService } from '../SoapRequestAPI/callSoapService';
+//import { callSoapService } from '../SoapRequestAPI/callSoapService';
 import { GlobalStyles } from '../Styles/styles';
-import EmployeeListCard from '../Components/EmployeeListCard';
+//import EmployeeListCard from '../Components/EmployeeListCard';
 import { useAuth } from '../Context/AuthContext';
 import { SaveAttendance } from '../Utils/SaveAttendance';
 import { ImageRecognition } from '../Utils/ImageRecognition';
 import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
+import RNFS from 'react-native-fs';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,6 +21,8 @@ const TeamCheckinEmployees = () => {
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+
+    const hasNonMatchedFacesRef = useRef(false);
     const [btnloading, setbtnLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [base64Img, setBase64Img] = useState(null);
@@ -27,13 +30,13 @@ const TeamCheckinEmployees = () => {
         locationName, entryDate, entryTime, coordinates } = route.params || {};
     const TrackingStatus = 'checkin';
     const [selectedEmp, setSelectedEmployees] = useState([]);
+    const [empNo, setEmpNo] = useState([]);
     const [recogloading, setrecogLoading] = useState(false);
     const [matchingFaceNames, setMatchingFaceNames] = useState([]);
     const [cleanedMatchNames, setCleanedMatchNames] = useState([]);
     const [groupedData, setgroupedData] = useState([]);
     const [errorMessage, setErrorMessage] = useState('');
-    const [matchedImage, setMatchedImage] = useState(null);
-    const [empNo, setEmpNo] = useState([]);
+    const [empData, setEmpData] = useState('');
 
     const userEmail = userData.userEmail;
     const userName = userData.userName;
@@ -42,39 +45,39 @@ const TeamCheckinEmployees = () => {
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
 
-    const getEmpImage = async (employees) => {
-        try {
-            setLoading(true);
-            const EmployeeListWithImages = [];
+    // const getEmpImage = async (employees) => {
+    //     try {
+    //         setLoading(true);
+    //         const EmployeeListWithImages = [];
 
-            for (const emp of employees) {
-                let empImage = null;
+    //         for (const emp of employees) {
+    //             let empImage = null;
 
-                try {
-                    // Call SOAP API for employee image
-                    empImage = await callSoapService(userData.clientURL, 'getpic_bytearray', {
-                        EmpNo: emp.EMP_NO,
-                    });
+    //             try {
+    //                 // Call SOAP API for employee image
+    //                 empImage = await callSoapService(userData.clientURL, 'getpic_bytearray', {
+    //                     EmpNo: emp.EMP_NO,
+    //                 });
 
-                } catch (error) {
-                    console.warn(`Failed to fetch image for ${emp.EMP_NO}`, error);
-                    empImage = null;
-                }
+    //             } catch (error) {
+    //                 console.warn(`Failed to fetch image for ${emp.EMP_NO}`, error);
+    //                 empImage = null;
+    //             }
 
-                EmployeeListWithImages.push({
-                    ...emp,
-                    EMP_IMAGE: empImage,
-                });
-            }
+    //             EmployeeListWithImages.push({
+    //                 ...emp,
+    //                 EMP_IMAGE: empImage,
+    //             });
+    //         }
 
-            setSelectedEmployees(EmployeeListWithImages);
-        }
-        catch (error) {
-            console.error('Error fetching employee images:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    //         setSelectedEmployees(EmployeeListWithImages);
+    //     }
+    //     catch (error) {
+    //         console.error('Error fetching employee images:', error);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     const handleImageRecognition = async () => {
         await ImageRecognition(
@@ -105,31 +108,50 @@ const TeamCheckinEmployees = () => {
         }
     }, [errorMessage]);
 
+    useEffect(() => {
+        if (groupedData && groupedData.length > 0) {
+            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Employee");
+            hasNonMatchedFacesRef.current = hasNonMatchedFaces;
+
+            const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
+            setEmpNo(extractedEmpNos);
+            setSelectedEmployees(extractedEmpNos);
+
+            const empDataXml = extractedEmpNos.map(empNo => `<string>${empNo}</string>`).join('');
+
+            console.log('empDataXml', empDataXml);
+
+            setEmpData(empDataXml);
+
+        }
+    }, [groupedData]);
 
     const SaveTeamCheckin = async () => {
+        if (!capturedImage) {
+            Alert.alert('Missing required data. Please ensure photo is captured.');
+            return;
+        }
+        if (!projectNo || !projectName) {
+            Alert.alert('Now Select Project Details to Continue.');
+            return;
+        }
+        if (hasNonMatchedFacesRef.current || !selectedEmp || selectedEmp.length === 0) {
+            Alert.alert('UnMatched Employee Found. Add Employee and try again.');
+            return;
+        }
         setbtnLoading(true);
-        const selectedEmpNos = selectedEmp
-            .filter(emp => emp.EMP_NO) // filter null or undefined
-            .map(emp => emp.EMP_NO);
-
-        // 2. Extract EMP_NO from groupedData
-        const groupedEmpNos = groupedData.flatMap(item =>
-            item.data
-                .filter(emp => emp.EMP_NO)
-                .map(emp => emp.EMP_NO)
-        );
-
-        // 3. Merge both lists and remove duplicates
-        const allEmpNos = Array.from(new Set([...selectedEmpNos, ...groupedEmpNos]));
-
-        // 4. Convert to required XML string for API
-        const empDataXml = allEmpNos.map(empNo => `<string>${empNo}</string>`).join('');
-
-        const empData = empDataXml;
 
         const base64Img = await convertUriToBase64(capturedImage);
 
         setBase64Img(base64Img);
+
+        if (capturedImage) {
+            const exists = await RNFS.exists(capturedImage);
+            if (exists) {
+                await RNFS.unlink(capturedImage);
+                console.log('Image deleted from cache:', capturedImage);
+            }
+        }
 
         try {
             await SaveAttendance({
@@ -149,11 +171,10 @@ const TeamCheckinEmployees = () => {
                 returnTo: 'TeamCheckin',
                 setErrorMessage
             });
-
-            setbtnLoading(false);
         } catch (error) {
-            setbtnLoading(false);
             console.error('Error saving Checkin data:', error);
+        } finally {
+            setbtnLoading(false);
         }
     };
 
@@ -170,7 +191,7 @@ const TeamCheckinEmployees = () => {
                 <Text style={GlobalStyles.subtitle}> {projectName}</Text>
             </View>
 
-            <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginTop: 0,alignItems: 'center' }]}>
+            <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
                 <View style={styles.imageContainer}>
                     <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
                     {capturedImage ? (
@@ -188,7 +209,7 @@ const TeamCheckinEmployees = () => {
                 <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
             </View>
 
-            <FlatList
+            {/* <FlatList
                 data={selectedEmp}
                 keyExtractor={(item) => item.EMP_NO}
                 ListHeaderComponent={
@@ -220,6 +241,33 @@ const TeamCheckinEmployees = () => {
                     <EmployeeListCard loading={loading} selectedEmp={[item]} />
                 )}
                 ListEmptyComponent={<Text style={[GlobalStyles.body, { padding: 10, textAlign: 'center' }]}>No employees selected.</Text>}
+            /> */}
+
+            {/* // const selectedEmpNos = selectedEmp
+            //     .filter(emp => emp.EMP_NO) // filter null or undefined
+            //     .map(emp => emp.EMP_NO);
+
+            // 2. Extract EMP_NO from groupedData
+            const groupedEmpNos = groupedData.flatMap(item =>
+                item.data
+                    .filter(emp => emp.EMP_NO)
+                    .map(emp => emp.EMP_NO)
+            );
+
+            // 3. Merge both lists and remove duplicates
+            //const allEmpNos = Array.from(new Set([...selectedEmpNos, ...groupedEmpNos]));
+
+            // 4. Convert to required XML string for API
+            const empDataXml = groupedEmpNos.map(empNo => `<string>${empNo}</string>`).join('');
+
+            const empData = empDataXml; */}
+
+            <FlatList
+                data={selectedEmp}
+                keyExtractor={(item) => item.EMP_NO}
+                ListHeaderComponent={
+                    <ImageRecognitionResult recogloading={recogloading} groupedData={groupedData} />
+                }
             />
 
             <View style={GlobalStyles.bottomButtonContainer}>

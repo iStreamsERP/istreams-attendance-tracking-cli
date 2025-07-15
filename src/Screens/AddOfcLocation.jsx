@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ProjectListPopup from '../Modal/ProjectListPopUp';
 import { useAuth } from '../Context/AuthContext';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
+import ProjectLocationPopUp from '../Modal/ProjectLocationPopUp';
 
 const AddOfcLocation = () => {
     const navigation = useNavigation();
@@ -21,6 +22,7 @@ const AddOfcLocation = () => {
     const [coordinates, setCoordinates] = useState('');
     const [locationDescription, setlocationDescription] = useState('');
     const [isPopupVisible, setPopupVisible] = useState(false);
+    const [isLocPopupVisible, setLocPopupVisible] = useState(false);
     const [projectNo, setProjectNo] = useState('');
     const [projectName, setProjectName] = useState('');
     const [btnloading, setbtnLoading] = useState(false);
@@ -81,6 +83,35 @@ const AddOfcLocation = () => {
         setPopupVisible(false);
     };
 
+    const handleProjectLocSelect = (projectLoc) => {
+        // Fallback to current values if API returns null
+        const finalGPS = projectLoc.GPS_LOCATION || coordinates;
+        const finalAddress = projectLoc.LOCATION_ADDRESS || address;
+
+        const [lat, long] = finalGPS?.split(',') || ['', ''];
+
+        // Update states
+        setLocationName(projectLoc.SITE_LOCATION || '');
+        setCoordinates(finalGPS);
+        setAddress(finalAddress);
+        setlocationDescription(projectLoc.DETAIL_DESCRIPTION || '');
+
+        setFormData(prev => ({
+            ...prev,
+            SITE_LOCATION: projectLoc.SITE_LOCATION || '',
+            DETAIL_DESCRIPTION: projectLoc.DETAIL_DESCRIPTION || '',
+            LOCATION_ADDRESS: finalAddress,
+            CHECK_IN_RADIOUS: projectLoc.CHECK_IN_RADIOUS?.toString() || '',
+            GPS_LOCATION: finalGPS,
+            GPS_LATITUDE: lat,
+            GPS_LONGITUDE: long,
+            PROJECT_NO: projectLoc.PROJECT_NO || '',
+            PROJECT_NAME: projectLoc.PROJECT_NAME || '',
+        }));
+
+        setLocPopupVisible(false);
+    };
+
 
     const handlenavToEmpPage = async () => {
         if (!formData.SITE_LOCATION || !formData.DETAIL_DESCRIPTION) {
@@ -132,7 +163,13 @@ const AddOfcLocation = () => {
         <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Add Office Location" />
 
-            <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Location Details</Text>
+            <View style={[GlobalStyles.twoInputContainer, { alignItems: 'center', marginVertical: 5 }]}>
+                <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Location Details</Text>
+                <Button icon="pencil" mode="contained-tonal" onPress={() => setLocPopupVisible(true)}>
+                    Edit
+                </Button>
+            </View>
+
             <TextInput
                 mode='outlined'
                 label="Location Name"
@@ -149,6 +186,7 @@ const AddOfcLocation = () => {
                 mode='outlined'
                 label="Address"
                 value={formData.LOCATION_ADDRESS}
+                multiline
                 numberOfLines={2}
                 onChangeText={text => handleChange('LOCATION_ADDRESS', text)}
                 editable={false} />
@@ -202,9 +240,15 @@ const AddOfcLocation = () => {
                 <TextInput
                     mode="outlined"
                     label="Project Name"
-                    value={projectName}
+                    value={formData.PROJECT_NAME}
                     showSoftInputOnFocus={false}
                     placeholder="Enter Project Name" />
+
+                <ProjectLocationPopUp
+                    visible={isLocPopupVisible}
+                    onClose={() => setLocPopupVisible(false)}
+                    onSelect={handleProjectLocSelect}
+                />
             </View>
 
             <View style={GlobalStyles.bottomButtonContainer}>
@@ -212,7 +256,7 @@ const AddOfcLocation = () => {
                     disabled={btnloading}
                     loading={btnloading}
                     onPress={handlenavToEmpPage}>
-                    Save
+                    {btnloading ? 'Saving...' : 'Save'}
                 </Button>
             </View>
         </View>

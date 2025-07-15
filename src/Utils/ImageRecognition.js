@@ -179,6 +179,12 @@ export const ImageRecognition = async (
                 if (nonMatched.length > 0) newGroupedData.push({ title: 'Non-Matched Employee', data: nonMatched });
                 if (matchedNoEmp.length > 0) newGroupedData.push({ title: 'Matched Employee (No Employee in List)', data: matchedNoEmp });
 
+                console.log(newGroupedData);
+
+                if(newGroupedData.length === 0) {
+                    setErrorMessage('Image Not Recognized. Recapture the Image');
+                }
+
                 setGroupedData(newGroupedData);
             } catch (error) {
                 setErrorMessage(`Error: ${error.message}`);

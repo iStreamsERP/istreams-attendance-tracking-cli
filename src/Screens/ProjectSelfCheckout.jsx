@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, Alert, StyleSheet, Image } from 'react-native';
+import { Text, View, Image, StyleSheet, Alert } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
-import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import { SaveAttendance } from '../Utils/SaveAttendance';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import ProjectListPopup from '../Modal/ProjectListPopUp';
 import { LocationService } from '../Logics/LocationService';
@@ -15,14 +14,13 @@ import { ImageRecognition } from '../Utils/ImageRecognition';
 import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 
-const SelfCheckout = () => {
+const ProjectSelfCheckout = () => {
+    const insets = useSafeAreaInsets();
+    const { userData } = useAuth();
     const [isPopupVisible, setPopupVisible] = useState(false);
     const navigation = useNavigation();
-    const insets = useSafeAreaInsets();
-    const { selectedLocation } = useRoute().params;
-    const { userData } = useAuth();
     const [btnloading, setbtnLoading] = useState(false);
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
@@ -43,8 +41,6 @@ const SelfCheckout = () => {
     const [autosaveTriggered, setAutosaveTriggered] = useState(false);
     const [showCameraModal, setShowCameraModal] = useState(false);
     const [address, setAddress] = useState('');
-    const [matchedImage, setMatchedImage] = useState(null);
-    const [headerName, setHeaderName] = useState('');
 
     const userEmail = userData.userEmail;
     const userName = userData.userName;
@@ -52,49 +48,6 @@ const SelfCheckout = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
-
-    useEffect(() => {
-        setShowCameraModal(true);
-
-        LocationService(setLocationName, setCoordinates, setAddress);
-
-        const now = new Date();
-        setEntryDate(formatDate(now));
-        setEntryTime(formatTime(now));
-    }, []);
-
-    useEffect(() => {
-        const loadOrUpdateLocation = async () => {
-            try {
-                let locationFromParams = selectedLocation;
-
-                if (locationFromParams) {
-                    // Save new value if different from stored
-                    const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
-                    if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
-                        await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
-                        console.log('Stored new location:', locationFromParams);
-                    }
-                }
-
-                // Load final location from storage (which is either the newly saved one or the existing one)
-                const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
-                const location = finalStored ? JSON.parse(finalStored) : null;
-
-                console.log('Using location:', location);
-
-                const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
-                setProjectNo(projectNo);
-                setProjectName(projectName);
-                setHeaderName(location?.siteLocation || '');
-
-            } catch (error) {
-                console.error('Error handling location storage:', error);
-            }
-        };
-
-        loadOrUpdateLocation();
-    }, []);
 
     const handleProjectSelect = (project) => {
         setProjectNo(project.PROJECT_NO);
@@ -117,6 +70,16 @@ const SelfCheckout = () => {
     };
 
     useEffect(() => {
+        setShowCameraModal(true);
+
+        LocationService(setLocationName, setCoordinates, setAddress);
+
+        const now = new Date();
+        setEntryDate(formatDate(now));
+        setEntryTime(formatTime(now));
+    }, []);
+
+    useEffect(() => {
         if (capturedImage) {
             handleImageRecognition();
         }
@@ -130,6 +93,7 @@ const SelfCheckout = () => {
         }
     }, [errorMessage]);
 
+
     useEffect(() => {
         if (groupedData && groupedData.length > 0) {
             const hasNonMatchedFaces = groupedData.some(item => item.title === "Non-Matched Faces");
@@ -137,50 +101,14 @@ const SelfCheckout = () => {
             if (hasNonMatchedFaces) {
                 setEmpNo([]);
                 setSelectedEmp(null);
-                navigation.navigate('FailureAnimationScreen', {
-                    message: 'No Employee Image Matched',
-                    details: 'Next employee please',
-                    returnTo: 'SelfCheckout'
-                });
-            }
-            else {
-                const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
-                console.log("Extracted Employee Numbers:", extractedEmpNos);
-                setEmpNo(extractedEmpNos);
-                setSelectedEmp(extractedEmpNos[0]);
-            }
-        }
-    }, [groupedData]);
-
-    useEffect(() => {
-        if (groupedData && groupedData.length > 0) {
-            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces");
-
-            if (hasNonMatchedFaces) {
-                setEmpNo([]);
-                setSelectedEmp(null);
-
-                // Set matched image to show non-matched faces or a placeholder
-                setMatchedImage(null);
-
-                navigation.navigate('FailureAnimationScreen', {
-                    message: 'No Employee Image Matched',
-                    details: 'Next employee please',
-                    returnTo: 'SelfCheckin'
-                });
             } else {
                 const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
                 setEmpNo(extractedEmpNos);
                 setSelectedEmp(extractedEmpNos[0]);
-
-                // Generate matched image URL for the first matched employee
-                if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
-                    setMatchedImage(imageUrl);
-                }
             }
         }
     }, [groupedData]);
+
 
     useEffect(() => {
         if (
@@ -190,14 +118,19 @@ const SelfCheckout = () => {
             locationName &&
             selectedEmp?.length > 0
         ) {
-            SaveSelfCheckout();
+            SaveSelfCheckin();
             setAutosaveTriggered(true);
         }
     }, [capturedImage, groupedData, locationName, selectedEmp]);
 
-    const SaveSelfCheckout = async () => {
+
+    const SaveSelfCheckin = async () => {
         if (!capturedImage) {
             alert('Missing required data. Please ensure photo is captured.');
+            return;
+        }
+        if (!projectNo || !projectName) {
+            alert('Now Select Project Details to Continue.');
             return;
         }
         if (!selectedEmp || selectedEmp === null || selectedEmp === '') {
@@ -227,7 +160,7 @@ const SelfCheckout = () => {
                 selectedEmp: empData,
                 base64Img: base64Img,
                 navigation,
-                returnTo: 'SelfCheckout',
+                returnTo: '',
                 setErrorMessage
             });
         } catch (error) {
@@ -245,8 +178,7 @@ const SelfCheckout = () => {
 
     return (
         <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
-            <Header title={`${headerName} Check-out`} />
-
+            <Header title="Project Self Check-In" />
             <View style={{ flex: 1 }}>
                 <View style={GlobalStyles.locationContainer}>
                     <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
@@ -301,51 +233,17 @@ const SelfCheckout = () => {
                         placeholder="Enter Project Name" />
                 </View>
 
-                <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginBottom: 10 }]}>
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={() => { resetFaceStates(); setShowCameraModal(true); }} >Retake</Button>
+                <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginVertical: 10 }]} >
+                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={() => setShowCameraModal(true)} >Retake</Button>
                     <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
                 </View>
 
-                <View style={GlobalStyles.twoInputContainer}>
-                    <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
-                        {capturedImage ? (
-                            <Image
-                                source={{ uri: capturedImage }}
-                                style={GlobalStyles.empImageDisplay}
-                            />
-                        ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
-                                <Text style={styles.placeholderText}>No Image</Text>
-                            </View>
-                        )}
-                    </View>
-
-                    <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>
-                            {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
-                                ? "No Match Found"
-                                : ""}
-                        </Text>
-                        {matchedImage ? (
-                            <Image
-                                source={{ uri: matchedImage }}
-                                style={GlobalStyles.empImageDisplay}
-                                onError={(error) => {
-                                    console.log('Image load error:', error);
-                                    setMatchedImage(null);
-                                }}
-                            />
-                        ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
-                                <Text style={styles.placeholderText}>
-                                    {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
-                                        ? "No Match Found"
-                                        : ""}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
+                <View style={styles.imageContainer}>
+                    <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                    <Image
+                        source={{ uri: capturedImage }}
+                        style={GlobalStyles.empImageDisplay}
+                    />
                 </View>
 
                 {showCameraModal && (
@@ -367,15 +265,15 @@ const SelfCheckout = () => {
 
             <View style={GlobalStyles.bottomButtonContainer}>
                 <Button mode="contained"
-                    onPress={SaveSelfCheckout}
-                    loading={btnloading}
-                    disabled={btnloading}>
+                    onPress={SaveSelfCheckin}
+                    disabled={btnloading}
+                    loading={btnloading}>
                     Save
                 </Button>
             </View>
         </View>
-    );
-};
+    )
+}
 
 const styles = StyleSheet.create({
     empImage: {
@@ -384,23 +282,6 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         marginRight: 10,
     },
-    imageContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    placeholderContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderStyle: 'dashed',
-    },
-    placeholderText: {
-        color: '#666',
-        fontSize: 12,
-        textAlign: 'center',
-    },
 });
 
-export default SelfCheckout;
+export default ProjectSelfCheckout;

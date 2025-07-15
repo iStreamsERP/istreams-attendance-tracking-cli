@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../Components/Header';
 import { LocationService } from '../Logics/LocationService';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
@@ -11,10 +11,13 @@ import ProjectListPopup from '../Modal/ProjectListPopUp';
 import CustomDatePicker from '../Components/CustomDatePicker';
 import ManualImageCaptureModal from '../Modal/ManualImageCaptureModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TeamCheckout = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const route = useRoute();
+    const { selectedLocation } = route.params || {};
     const [locationName, setLocationName] = useState('Fetching Location...');
     const [coordinates, setCoordinates] = useState('');
     const [entryDate, setCheckoutDate] = useState('');
@@ -28,6 +31,38 @@ const TeamCheckout = () => {
     const [capturedImage, setCapturedImage] = useState(null);
     const [cameraVisible, setCameraVisible] = useState(false);
 
+    useEffect(() => {
+        const loadOrUpdateLocation = async () => {
+            try {
+                let locationFromParams = selectedLocation;
+
+                if (locationFromParams) {
+                    // Save new value if different from stored
+                    const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                    if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
+                        await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
+                        console.log('Stored new location:', locationFromParams);
+                    }
+                }
+
+                // Load final location from storage (which is either the newly saved one or the existing one)
+                const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                const location = finalStored ? JSON.parse(finalStored) : null;
+
+                console.log('Using location:', location);
+
+                const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
+                setProjectNo(projectNo);
+                setProjectName(projectName);
+
+            } catch (error) {
+                console.error('Error handling location storage:', error);
+            }
+        };
+
+        loadOrUpdateLocation();
+    }, []);
+
     const handleProjectSelect = (project) => {
         setProjectNo(project.PROJECT_NO);
         setProjectName(project.PROJECT_NAME);
@@ -35,6 +70,8 @@ const TeamCheckout = () => {
     };
 
     const handleDateSelected = (dateString) => {
+        console.log('Date selected:', dateString);
+        
         setChosenCheckinDate(dateString);
     };
 
@@ -106,12 +143,13 @@ const TeamCheckout = () => {
                 <TextInput
                     mode="outlined"
                     label="Project No"
-                    onPressIn={() => setPopupVisible(true)}
+                    // onPressIn={() => setPopupVisible(true)}
                     value={projectNo}
                     onChangeText={setProjectNo}
                     style={GlobalStyles.container1}
                     placeholder="Enter Project No"
-                    showSoftInputOnFocus={false} />
+                    //showSoftInputOnFocus={false}
+                    editable={false} />
                 <TextInput
                     mode="outlined"
                     label="Check-in Date"
@@ -154,11 +192,11 @@ const TeamCheckout = () => {
                 </Button>
             </View>
 
-            <ProjectListPopup
+            {/* <ProjectListPopup
                 visible={isPopupVisible}
                 onClose={() => setPopupVisible(false)}
                 onSelect={handleProjectSelect}
-            />
+            /> */}
 
             <CustomDatePicker
                 visible={visible}

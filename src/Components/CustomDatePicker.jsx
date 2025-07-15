@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-    Modal,
-    View,
-    Text,
-    StyleSheet,
-    Platform,
-    TouchableOpacity,
-} from 'react-native';
+import { Modal, View, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from 'react-native-paper';
 import { formatDate } from '../Utils/dataTimeUtils';
@@ -15,13 +8,13 @@ const CustomDatePicker = ({ visible, onClose, onDateSelected }) => {
     const [tempDate, setTempDate] = useState(new Date());
 
     const handleChange = (event, selectedDate) => {
-        const currentDate = selectedDate || tempDate;
-
         if (Platform.OS === 'android') {
-            onDateSelected(formatDate(currentDate));
-            onClose();
+            if (event.type === 'set') {
+                onDateSelected(formatDate(selectedDate));
+            }
+            onClose(); // Always close the modal after interaction
         } else {
-            setTempDate(currentDate); // keep as Date object on iOS
+            setTempDate(selectedDate || tempDate);
         }
     };
 
@@ -30,24 +23,34 @@ const CustomDatePicker = ({ visible, onClose, onDateSelected }) => {
         onClose();
     };
 
-    return (
-        <Modal visible={visible} transparent animationType="fade">
+    if (Platform.OS === 'android') {
+        return visible ? (
             <DateTimePicker
                 value={tempDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={handleChange}
                 style={styles.datePicker}
             />
+        ) : null;
+    }
 
-            {Platform.OS === 'ios' && (
-                <View style={styles.buttonRow}>
+    return (
+        <Modal visible={visible} transparent animationType="fade">
+            <View style={{ marginTop: 'auto', backgroundColor: '#fff', padding: 16 }}>
+                <DateTimePicker
+                    value={tempDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleChange}
+                />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Button onPress={onClose}>Cancel</Button>
                     <Button mode="contained" onPress={handleConfirmIOS}>
                         Confirm
                     </Button>
                 </View>
-            )}
+            </View>
         </Modal>
     );
 };

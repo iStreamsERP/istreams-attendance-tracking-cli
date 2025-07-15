@@ -105,6 +105,17 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
     const shakeStartTime = useRef(null);
     const headShakeDetected = useRef(false);
 
+    useEffect(() => {
+        return () => {
+            if (autoCaptureTimeout.current) {
+                clearTimeout(autoCaptureTimeout.current);
+            }
+            if (countdownInterval.current) {
+                clearInterval(countdownInterval.current);
+            }
+        };
+    }, []);
+
     // Updated challenges with icons and improved descriptions
     const challengeTypes = useMemo(() => [
         {
@@ -245,34 +256,55 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
     // Detect blink function
     const detectBlink = useCallback((face) => {
         if (!face) return false;
-
-        const left = face.leftEyeOpenProbability ?? 1;
-        const right = face.rightEyeOpenProbability ?? 1;
-
+ 
+        const left = face.leftEyeOpenProbability;
+        const right = face.rightEyeOpenProbability;
+ 
+        if (left === undefined || right === undefined || left === null || right === null) {
+            return false;
+        }
+ 
         const now = Date.now();
-        const closed = left < 0.3 && right < 0.3;
+        const closed = left < 0.5 && right < 0.5;
         const opened = left > 0.8 && right > 0.8;
-
-        if (!blinkDetected.current) {
-            if (closed) {
-                eyeClosedTime.current = now;
-            }
-
-            if (eyeClosedTime.current && opened) {
-                const blinkDuration = now - eyeClosedTime.current;
-                if (blinkDuration >= 100 && blinkDuration <= 800) {
-                    blinkDetected.current = true;
-                    setTimeout(() => {
-                        blinkDetected.current = false;
-                    }, 3000);
-                    return true;
-                } else {
-                    eyeClosedTime.current = null;
-                }
+ 
+        console.log('Blink check:', { left: left.toFixed(2), right: right.toFixed(2), closed, opened });
+ 
+        // If blink already detected and still valid, return true
+        if (blinkDetected.current && now - blinkDetected.current < 3000) { // Extended from 2000 to 3000
+            return true;
+        }
+ 
+        // Start of blink - eyes closed
+        if (closed && !eyeClosedTime.current) {
+            eyeClosedTime.current = now;
+            console.log('👁️ Eyes closed detected');
+        }
+ 
+        // End of blink - eyes opened after being closed
+        if (opened && eyeClosedTime.current) {
+            const blinkDuration = now - eyeClosedTime.current;
+            console.log('⏱️ Blink duration:', blinkDuration);
+ 
+            // FIXED: More lenient duration (100ms to 2000ms)
+            if (blinkDuration >= 100 && blinkDuration <= 2000) {
+                blinkDetected.current = now;
+                eyeClosedTime.current = null;
+                console.log('✅ Valid blink detected!');
+                return true;
+            } else {
+                eyeClosedTime.current = null;
+                console.log('❌ Invalid blink duration:', blinkDuration);
             }
         }
-
-        return blinkDetected.current;
+ 
+        // Reset if eyes have been open too long (increased timeout)
+        if (opened && eyeClosedTime.current && (now - eyeClosedTime.current > 2500)) {
+            eyeClosedTime.current = null;
+            console.log('🔄 Reset - eyes open too long');
+        }
+ 
+        return false;
     }, []);
 
     // Detect headshake using yaw angle
@@ -338,6 +370,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                     return true;
             }
         }
+
         // For double validation challenges
         else if (currentChallenge.type === 'double') {
             // Check which actions are completed
@@ -398,6 +431,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         setFaceInTargetBox(false);
         setChallengeCompleted(false);
         setStableDetectionCount(0);
+        setCountdown(0);
         blinkDetected.current = false;
         eyeClosedTime.current = null;
         shakeHistory.current = [];
@@ -435,39 +469,92 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         if (!face || !face.bounds) return false;
 
         const { bounds } = face;
+
+        // Get the face center point
         const faceCenterX = bounds.x + bounds.width / 2;
         const faceCenterY = bounds.y + bounds.height / 2;
 
-        // Add tolerance for better UX
-        const tolerance = 50;
+        // Get target box center
+        const targetCenterX = targetBoxLeft + targetBoxWidth / 2;
+        const targetCenterY = targetBoxTop + targetBoxHeight / 2;
 
-        return (
-            faceCenterX >= (targetBoxLeft - tolerance) &&
-            faceCenterX <= (targetBoxRight + tolerance) &&
-            faceCenterY >= (targetBoxTop - tolerance) &&
-            faceCenterY <= (targetBoxBottom + tolerance)
-        );
-    }, [targetBoxLeft, targetBoxTop, targetBoxRight, targetBoxBottom]);
+        // Check if face center is within target box with some tolerance
+        const horizontalTolerance = targetBoxWidth * 0.3; // 30% tolerance on each side
+        const verticalTolerance = targetBoxHeight * 0.3; // 30% tolerance on top/bottom
+
+        const isInHorizontalRange = Math.abs(faceCenterX - targetCenterX) <= (targetBoxWidth / 2 + horizontalTolerance);
+        const isInVerticalRange = Math.abs(faceCenterY - targetCenterY) <= (targetBoxHeight / 2 + verticalTolerance);
+
+        // Check if face has reasonable overlap with target box
+        const faceLeft = bounds.x;
+        const faceRight = bounds.x + bounds.width;
+        const faceTop = bounds.y;
+        const faceBottom = bounds.y + bounds.height;
+
+        // Calculate overlap area
+        const overlapLeft = Math.max(faceLeft, targetBoxLeft);
+        const overlapRight = Math.min(faceRight, targetBoxRight);
+        const overlapTop = Math.max(faceTop, targetBoxTop);
+        const overlapBottom = Math.min(faceBottom, targetBoxBottom);
+
+        // Check if there's any overlap
+        const hasOverlap = overlapLeft < overlapRight && overlapTop < overlapBottom;
+
+        if (!hasOverlap) return false;
+
+        // Calculate overlap percentage
+        const overlapWidth = overlapRight - overlapLeft;
+        const overlapHeight = overlapBottom - overlapTop;
+        const overlapArea = overlapWidth * overlapHeight;
+        const faceArea = bounds.width * bounds.height;
+        const overlapPercentage = overlapArea / faceArea;
+
+        // Face should have at least 40% overlap with target box
+        const minOverlapPercentage = 0.4;
+        const hasMinimumOverlap = overlapPercentage >= minOverlapPercentage;
+
+        // Check if face is large enough (minimum size requirements)
+        const minFaceWidth = targetBoxWidth * 0.3; // Face should be at least 30% of box width
+        const minFaceHeight = targetBoxHeight * 0.3; // Face should be at least 30% of box height
+        const isLargeEnough = bounds.width >= minFaceWidth && bounds.height >= minFaceHeight;
+
+        // Check if face is not too large (to avoid very close faces)
+        const maxFaceWidth = targetBoxWidth * 1.5; // Face shouldn't be more than 150% of box width
+        const maxFaceHeight = targetBoxHeight * 1.5; // Face shouldn't be more than 150% of box height
+        const isNotTooLarge = bounds.width <= maxFaceWidth && bounds.height <= maxFaceHeight;
+
+        return isInHorizontalRange && isInVerticalRange && hasMinimumOverlap && isLargeEnough && isNotTooLarge;
+    }, [targetBoxLeft, targetBoxTop, targetBoxRight, targetBoxBottom, targetBoxWidth, targetBoxHeight]);
 
     // Handle photo capture
     const handleCapture = useCallback(async () => {
+        // Prevent multiple captures
         if (isCapturing) {
-            console.log('Already capturing, skipping...');
+            console.log('Capture already in progress, skipping...');
             return false;
         }
 
+        // Check camera readiness
         if (!cameraRef.current) {
             Alert.alert("Error", "Camera not ready");
             return false;
         }
 
-        if (faces.length !== 1) {
-            Alert.alert("Position Error", "Please ensure only one face is visible");
+        // Check face conditions
+        const facesNearBox = faces.filter(face => isFaceInTargetBox(face));
+        if (facesNearBox.length !== 1) {
+            if (faces.length === 0) {
+                Alert.alert("Position Error", "No face detected");
+            } else if (facesNearBox.length === 0) {
+                Alert.alert("Position Error", "Please move your face closer to the target area");
+            } else {
+                Alert.alert("Position Error", "Only one face should be near the target area");
+            }
             return false;
         }
 
         if (!faceInTargetBox) {
-            Alert.alert("Position Error", "Please position your face within the target box");
+            Alert.alert("Position Error", "Please position your face near the target box");
             return false;
         }
 
@@ -477,17 +564,18 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
 
         try {
-            setIsCapturing(true);
+            setIsCapturing(true); // Set capturing state immediately
 
+            // Clear any pending timeouts/intervals
             if (autoCaptureTimeout.current) {
                 clearTimeout(autoCaptureTimeout.current);
                 autoCaptureTimeout.current = null;
             }
-
-            setCountdown(0);
             if (countdownInterval.current) {
                 clearInterval(countdownInterval.current);
+                countdownInterval.current = null;
             }
+            setCountdown(0);
 
             console.log('Taking photo...');
             const photo = await cameraRef.current.takePhoto({
@@ -496,51 +584,61 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 skipMetadata: false,
             });
 
-            if (photo?.path) {
-                const imageUri = `file://${photo.path}`;
-
-                const compressedUri = await compressImage(imageUri);
-
-                try {
-                    const originalStats = await RNFS.stat(imageUri);
-                    const compressedStats = await RNFS.stat(compressedUri);
-                    console.log('Original size:', Math.round(originalStats.size / 1024), 'KB');
-                    console.log('Compressed size:', Math.round(compressedStats.size / 1024), 'KB');
-                    const compressionRatio = ((1 - compressedStats.size / originalStats.size) * 100);
-                    console.log('Size reduction:', compressionRatio.toFixed(1) + '%');
-                } catch (e) {
-                    console.warn('Failed to get file stats:', e.message);
-                }
-
-                setCapturedImage(compressedUri);
-
-                // Reset states
-                blinkDetected.current = false;
-                eyeClosedTime.current = null;
-                shakeHistory.current = [];
-                shakeStartTime.current = null;
-                headShakeDetected.current = false;
-                setChallengeCompleted(false);
-                setStableDetectionCount(0);
-
-                // Call success handler after a brief delay to show success modal
-                setTimeout(() => {
-                    handleCaptureSuccess(compressedUri);
-                }, 1500);
-
-                return true;
+            if (!photo?.path) {
+                throw new Error("Photo path not available");
             }
 
-            Alert.alert("Error", "Failed to capture photo");
-            return false;
+            const imageUri = `file://${photo.path}`;
+            
+            //const rotationAngle = 270; //for production
+            const rotationAngle = 0; //for development
+            const compressedUri = await compressImage(imageUri, rotationAngle);
+
+            try {
+                const originalStats = await RNFS.stat(imageUri);
+                const compressedStats = await RNFS.stat(compressedUri);
+                console.log('Original size:', Math.round(originalStats.size / 1024), 'KB');
+                console.log('Compressed size:', Math.round(compressedStats.size / 1024), 'KB');
+                const compressionRatio = ((1 - compressedStats.size / originalStats.size) * 100);
+                console.log('Size reduction:', compressionRatio.toFixed(1) + '%');
+            } catch (e) {
+                console.warn('Failed to get file stats:', e.message);
+            }
+
+            setCapturedImage(compressedUri);
+
+            // Reset detection states
+            blinkDetected.current = false;
+            eyeClosedTime.current = null;
+            shakeHistory.current = [];
+            shakeStartTime.current = null;
+            headShakeDetected.current = false;
+            setChallengeCompleted(false);
+            setStableDetectionCount(0);
+
+            // Call success handler after a brief delay
+            setTimeout(() => {
+                handleCaptureSuccess(compressedUri);
+            }, 1500);
+
+            return true;
         } catch (error) {
             console.error('Capture error:', error);
             Alert.alert("Error", `Capture failed: ${error.message}`);
             return false;
         } finally {
-            setIsCapturing(false);
+            setIsCapturing(false); // Ensure capturing state is reset
         }
-    }, [faces.length, faceInTargetBox, autoCaptureEnabled, challengeCompleted, currentChallenge, isCapturing, handleCaptureSuccess]);
+    }, [
+        faces,
+        faceInTargetBox,
+        autoCaptureEnabled,
+        challengeCompleted,
+        currentChallenge,
+        isCapturing,
+        handleCaptureSuccess,
+        isFaceInTargetBox
+    ]);
 
     // Cleanup effects
     useEffect(() => {
@@ -629,25 +727,30 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         try {
             const now = Date.now();
             // Throttle to 10 FPS for better head shake detection
-            if (now - lastFrameTime.current < 100) return;
+            if (now - lastFrameTime.current < 500) return;
             lastFrameTime.current = now;
 
             // Ensure we have a valid array
             const validFaces = Array.isArray(detectedFaces) ? detectedFaces : [];
-            setFaces(validFaces);
 
-            const hasOneFace = validFaces.length === 1;
-            const face = hasOneFace ? validFaces[0] : null;
-            const faceInBox = hasOneFace && isFaceInTargetBox(face);
+            // Only consider faces that are inside the target box
+            const facesInTargetBox = validFaces.filter(face => isFaceInTargetBox(face));
 
-            setFaceInTargetBox(faceInBox);
+            // Update faces state with only the faces inside the box
+            setFaces(facesInTargetBox);
+
+            // Only consider the first face if multiple are detected inside the box
+            const hasOneFaceInBox = facesInTargetBox.length >= 1;
+            const face = hasOneFaceInBox ? facesInTargetBox[0] : null;
+
+            setFaceInTargetBox(hasOneFaceInBox);
 
             // Handle challenge completion
-            if (face && faceInBox) {
+            if (face && hasOneFaceInBox) {
                 const completed = detectLivenessAction(face);
                 setChallengeCompleted(completed);
 
-                // Enhanced stable detection logic for auto capture
+                // Auto capture logic with countdown
                 if (completed && autoCaptureEnabled && !isCapturing && !capturedImage) {
                     setStableDetectionCount(prev => {
                         const newCount = prev + 1;
@@ -658,50 +761,46 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                             currentChallenge?.id === 'none' ? 3 : 2;
 
                         if (newCount >= requiredStableFrames) {
-                            // Clear any existing timeout
-                            if (autoCaptureTimeout.current) {
-                                clearTimeout(autoCaptureTimeout.current);
+                            // Start countdown if not already started
+                            if (countdown === 0) {
+                                startCountdown();
                             }
-
-                            // Trigger auto capture with minimal delay
-                            autoCaptureTimeout.current = setTimeout(() => {
-                                handleCapture();
-                            }, currentChallenge?.id === 'headshake' ? 500 : 100);
-
-                            return 0; // Reset counter after triggering capture
+                            return newCount; // Keep the count
                         }
 
                         return newCount;
                     });
                 } else {
-                    setStableDetectionCount(0); // Reset if conditions not met
+                    // Stop countdown if conditions not met
+                    if (countdown > 0) {
+                        stopCountdown();
+                    }
+                    setStableDetectionCount(0);
                 }
             } else {
+                // Stop countdown if no valid face or not in box
+                if (countdown > 0) {
+                    stopCountdown();
+                }
                 setChallengeCompleted(false);
                 setStableDetectionCount(0);
 
-                // Clear auto capture timeout if conditions not met
-                if (autoCaptureTimeout.current) {
-                    clearTimeout(autoCaptureTimeout.current);
-                    autoCaptureTimeout.current = null;
+                // Reset states when no valid face or not in box
+                if (!hasOneFaceInBox) {
+                    if (currentChallenge?.id === 'blink') {
+                        blinkDetected.current = false;
+                        eyeClosedTime.current = null;
+                    }
+                    if (currentChallenge?.id === 'headshake') {
+                        // Don't reset head shake immediately to allow for movement
+                    }
+                    setStableDetectionCount(0);
                 }
             }
 
-            // Reset states when no valid face or not in box
-            if (!hasOneFace || !faceInBox) {
-                if (currentChallenge?.id === 'blink') {
-                    blinkDetected.current = false;
-                    eyeClosedTime.current = null;
-                }
-                if (currentChallenge?.id === 'headshake') {
-                    // Don't reset head shake immediately to allow for movement
-                }
-                setStableDetectionCount(0);
-            }
-
-            // Enhanced debug info
-            const debugDetails = `Challenge: ${currentChallenge?.id || 'none'}, Stable: ${stableDetectionCount}`;
-            setDebugInfo(`Faces: ${validFaces.length}, In Box: ${faceInBox}, Completed: ${challengeCompleted} | ${debugDetails}`);
+            // Enhanced debug info - show only faces in box
+            const debugDetails = `Challenge: ${currentChallenge?.id || 'none'}, Stable: ${stableDetectionCount}, Countdown: ${countdown}`;
+            setDebugInfo(`Faces In Box: ${facesInTargetBox.length}, Valid: ${hasOneFaceInBox}, Completed: ${challengeCompleted} | ${debugDetails}`);
 
         } catch (error) {
             console.error('Face processing error:', error);
@@ -710,8 +809,11 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             setFaceInTargetBox(false);
             setChallengeCompleted(false);
             setStableDetectionCount(0);
+            if (countdown > 0) {
+                stopCountdown();
+            }
         }
-    }, [detectLivenessAction, autoCaptureEnabled, capturedImage, handleCapture, isFaceInTargetBox, currentChallenge, challengeCompleted, isCapturing, stableDetectionCount]);
+    }, [detectLivenessAction, autoCaptureEnabled, capturedImage, isFaceInTargetBox, currentChallenge, challengeCompleted, isCapturing, stableDetectionCount, countdown, startCountdown, stopCountdown]);
 
     // Toggle auto capture
     const toggleAutoCapture = useCallback(() => {
@@ -725,12 +827,9 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         shakeStartTime.current = null;
         headShakeDetected.current = false;
 
-        // Clear any pending auto capture
-        if (autoCaptureTimeout.current) {
-            clearTimeout(autoCaptureTimeout.current);
-            autoCaptureTimeout.current = null;
-        }
-    }, []);
+        // Stop countdown when toggling
+        stopCountdown();
+    }, [stopCountdown]);
 
     // Check if capture button should be enabled
     const isCaptureButtonEnabled = () => {
@@ -745,20 +844,52 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
     };
 
+    // Updated countdown and auto-capture logic
+    const startCountdown = useCallback(() => {
+        if (countdown > 0 || !autoCaptureEnabled || isCapturing) return;
+
+        setCountdown(1);
+        countdownInterval.current = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(countdownInterval.current);
+                    countdownInterval.current = null;
+                    setCountdown(0);
+
+                    // Only trigger capture if conditions are still met
+                    if (faceInTargetBox && challengeCompleted && !isCapturing) {
+                        handleCapture();
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }, [countdown, autoCaptureEnabled, isCapturing, faceInTargetBox, challengeCompleted, handleCapture]);
+
+    const stopCountdown = useCallback(() => {
+        if (countdownInterval.current) {
+            clearInterval(countdownInterval.current);
+            countdownInterval.current = null;
+        }
+        setCountdown(0);
+    }, []);
+
     // Get face detection status message with icons
     const getFaceDetectionMessage = () => {
         if (isCapturing) return "📸 Capturing...";
-        if (faces.length === 0) return "👤 No face detected";
-        if (faces.length > 1) return `👤 Only one face allowed`;
+
+        if (faces.length === 0) return "👤 No face detected in target area";
+        if (faces.length > 1) return `👤 Only one face allowed in target area`;
 
         if (faces.length === 1) {
-            if (!faceInTargetBox) return "🎯 Position face in target area";
-
             if (challengeCompleted) {
                 if (autoCaptureEnabled) {
-                    return stableDetectionCount > 0 ?
-                        `⏱️ Auto capturing in ${Math.max(1, 3 - stableDetectionCount)}...` :
-                        "✅ Ready - Auto capturing...";
+                    if (countdown > 0) {
+                        return `⏰ Capturing in ${countdown}...`;
+                    } else {
+                        return "✅ Ready - Starting countdown...";
+                    }
                 } else {
                     return "✅ Ready - Tap to capture";
                 }
@@ -767,8 +898,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             // Show ONLY the current challenge step
             if (currentChallenge?.type === 'double') {
                 const currentStep = currentChallenge.completedActions.length;
-
-                // Only show the current action instruction
                 const currentAction = getActionDisplay(currentChallenge.sequence[currentStep]);
                 return `${currentAction.icon} ${currentAction.name}`;
             }

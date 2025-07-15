@@ -7,7 +7,9 @@ export default function SuccessAnimationScreen() {
   const navigation = useNavigation();
   const route = useRoute();
 
-  const { message, details, returnTo = 'BottomNavigation' } = route.params || {};
+  const { message, details, returnTo = 'BottomNavigation', selectedLocation } = route.params || {};
+
+  console.log(selectedLocation);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -27,7 +29,7 @@ export default function SuccessAnimationScreen() {
           duration: 500,
           useNativeDriver: true,
         }).start(() => {
-          navigation.replace(returnTo);
+          navigation.replace(returnTo, { selectedLocation });
         });
       }, 2000);
     };
@@ -37,7 +39,7 @@ export default function SuccessAnimationScreen() {
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.modal}>
+      <Animated.View style={[styles.modal, { opacity: fadeAnim }]}>
         <LottieView
           source={require('../../assets/animations/success_animation.json')}
           autoPlay
@@ -47,7 +49,7 @@ export default function SuccessAnimationScreen() {
 
         <Text style={styles.message}>{message}</Text>
         <Text style={styles.name}>{details}</Text>
-      </View>
+      </Animated.View>
     </View>
   );
 }

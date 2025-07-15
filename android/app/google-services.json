@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "554839029043",
+    "project_id": "istreams-attendance-trac-314a3",
+    "storage_bucket": "istreams-attendance-trac-314a3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554839029043:android:6be79df51a4ace4437ba46",
+        "android_client_info": {
+          "package_name": "com.istreamsattendanceapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9MYNdJx5YyQ1ejXYkKEu48GKQnjhAZOw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

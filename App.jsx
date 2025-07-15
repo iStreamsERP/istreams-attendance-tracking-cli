@@ -1,12 +1,32 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React, { useEffect } from 'react'
 import StackNavigation from './src/Navigation/StackNavigation'
 import { AuthProvider } from './src/Context/AuthContext';
+import { CheckinProvider } from './src/Context/CheckinContext';
+import messaging from '@react-native-firebase/messaging';
+import { Alert } from 'react-native';
+import { getToken, NotificationListener, requestUserPermission } from './src/Utils/notificationUtils';
 
 const App = () => {
+  useEffect(() => {
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      Alert.alert('A new FCM message arrived!', JSON.stringify(remoteMessage));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    requestUserPermission();
+    NotificationListener();
+    getToken();
+  }, []);
+
   return (
     <AuthProvider>
-      <StackNavigation />
+      <CheckinProvider>
+        <StackNavigation />
+      </CheckinProvider>
     </AuthProvider>
   );
 };
@@ -14,33 +34,3 @@ const App = () => {
 export default App
 
 const styles = StyleSheet.create({})
-
-
-// /**
-//  * Sample React Native App
-//  * https://github.com/facebook/react-native
-//  *
-//  * @format
-//  */
-
-// import { NewAppScreen } from '@react-native/new-app-screen';
-// import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-
-// function App() {
-//   const isDarkMode = useColorScheme() === 'dark';
-
-//   return (
-//     <View style={styles.container}>
-//       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-//       <NewAppScreen templateFileName="App.tsx" />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//   },
-// });
-
-// export default App;

@@ -16,7 +16,7 @@ export const convertUriToBase64 = async (uri) => {
     }
 };
 
-export const compressImage = async (uri) => {
+export const compressImage = async (uri, rotationAngle) => {
     try {
         console.log('Starting image compression...');
 
@@ -26,7 +26,7 @@ export const compressImage = async (uri) => {
             700, // maxHeight
             'JPEG', // format
             100, // quality (0-100)
-            0, // rotation
+            rotationAngle, // rotation
             null, // outputPath
             false, // keepMeta
             {

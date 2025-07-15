@@ -150,7 +150,7 @@ const ChangeEmpImageScreen = () => {
                       onSelect: async (employees) => {
                         setLoading(true);
                         if (employees.length !== 1) {
-                          alert('Please select only one employee.');
+                          Alert.alert('Please select only one employee.');
                           setLoading(false);
                           return;
                         }

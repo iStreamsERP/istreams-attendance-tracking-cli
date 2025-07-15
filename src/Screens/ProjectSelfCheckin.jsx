@@ -4,22 +4,25 @@ import { Button, TextInput } from 'react-native-paper';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
 import { SaveAttendance } from '../Utils/SaveAttendance';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import ProjectListPopup from '../Modal/ProjectListPopUp';
 import { LocationService } from '../Logics/LocationService';
 import { formatDate, formatTime } from '../Utils/dataTimeUtils';
-import AutoImageCaptureModal from './AutoImageCaptureModal';
+import AutoImageCaptureModal from '../Modal/AutoImageCaptureModal';
 import { ImageRecognition } from '../Utils/ImageRecognition';
 import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProjectSelfCheckin = () => {
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
-    const [isPopupVisible, setPopupVisible] = useState(false);
+    const route = useRoute();
+    const { selectedLocation } = route.params || {};
+    //const [isPopupVisible, setPopupVisible] = useState(false);
     const navigation = useNavigation();
     const [btnloading, setbtnLoading] = useState(false);
     const [entryDate, setEntryDate] = useState('');
@@ -38,9 +41,10 @@ const ProjectSelfCheckin = () => {
     const [base64Img, setBase64Img] = useState(null);
     const [selectedEmp, setSelectedEmp] = useState('');
     const [empNo, setEmpNo] = useState([]);
-    const [autosaveTriggered, setAutosaveTriggered] = useState(false);
     const [showCameraModal, setShowCameraModal] = useState(false);
     const [address, setAddress] = useState('');
+    const [matchedImage, setMatchedImage] = useState(null);
+    const [hasRecognized, setHasRecognized] = useState(false);
 
     const userEmail = userData.userEmail;
     const userName = userData.userName;
@@ -48,6 +52,63 @@ const ProjectSelfCheckin = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
+
+    useEffect(() => {
+        const loadOrUpdateLocation = async () => {
+            try {
+                let locationFromParams = selectedLocation;
+
+                if (locationFromParams) {
+                    // Save new value if different from stored
+                    const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                    if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
+                        await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
+                        console.log('Stored new location:', locationFromParams);
+                    }
+                }
+
+                // Load final location from storage (which is either the newly saved one or the existing one)
+                const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
+                const location = finalStored ? JSON.parse(finalStored) : null;
+
+                console.log('Using location:', location);
+
+                const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
+                setProjectNo(projectNo);
+                setProjectName(projectName);
+
+            } catch (error) {
+                console.error('Error handling location storage:', error);
+            }
+        };
+
+        loadOrUpdateLocation();
+    }, []);
+
+    useEffect(() => {
+        setShowCameraModal(true);
+
+        LocationService(setLocationName, setCoordinates, setAddress);
+
+        const now = new Date();
+        setEntryDate(formatDate(now));
+        setEntryTime(formatTime(now));
+    }, []);
+
+    useEffect(() => {
+        if (capturedImage && !hasRecognized) {
+            handleImageRecognition();
+            setHasRecognized(true);
+        }
+    }, [capturedImage, hasRecognized]);
+
+    useEffect(() => {
+        if (errorMessage) {
+            Alert.alert('Error', errorMessage, [
+                { text: 'OK', onPress: () => setErrorMessage('') }
+            ]);
+        }
+    }, [errorMessage]);
 
     const handleProjectSelect = (project) => {
         setProjectNo(project.PROJECT_NO);
@@ -70,59 +131,34 @@ const ProjectSelfCheckin = () => {
     };
 
     useEffect(() => {
-        setShowCameraModal(true);
-
-        LocationService(setLocationName, setCoordinates, setAddress);
-
-        const now = new Date();
-        setEntryDate(formatDate(now));
-        setEntryTime(formatTime(now));
-    }, []);
-
-    useEffect(() => {
-        if (capturedImage) {
-            handleImageRecognition();
-        }
-    }, [capturedImage]);
-
-    useEffect(() => {
-        if (errorMessage) {
-            Alert.alert('Error', errorMessage, [
-                { text: 'OK', onPress: () => setErrorMessage('') }
-            ]);
-        }
-    }, [errorMessage]);
-
-
-    useEffect(() => {
         if (groupedData && groupedData.length > 0) {
-            const hasNonMatchedFaces = groupedData.some(item => item.title === "Non-Matched Faces");
+            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces");
 
             if (hasNonMatchedFaces) {
                 setEmpNo([]);
                 setSelectedEmp(null);
+
+                // Set matched image to show non-matched faces or a placeholder
+                setMatchedImage(null);
+
+                navigation.navigate('FailureAnimationScreen', {
+                    message: 'No Employee Image Matched',
+                    details: 'Next employee please',
+                    returnTo: 'SelfCheckin'
+                });
             } else {
                 const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
                 setEmpNo(extractedEmpNos);
                 setSelectedEmp(extractedEmpNos[0]);
+
+                // Generate matched image URL for the first matched employee
+                if (extractedEmpNos.length > 0) {
+                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
+                    setMatchedImage(imageUrl);
+                }
             }
         }
     }, [groupedData]);
-
-
-    useEffect(() => {
-        if (
-            !autosaveTriggered &&
-            capturedImage &&
-            groupedData.length > 0 &&
-            locationName &&
-            selectedEmp?.length > 0
-        ) {
-            SaveSelfCheckin();
-            setAutosaveTriggered(true);
-        }
-    }, [capturedImage, groupedData, locationName, selectedEmp]);
-
 
     const SaveSelfCheckin = async () => {
         if (!capturedImage) {
@@ -158,7 +194,7 @@ const ProjectSelfCheckin = () => {
                 coordinates,
                 TrackingStatus,
                 selectedEmp: empData,
-                base64Img: base64Img,
+                base64Img: base64,
                 navigation,
                 returnTo: 'ProjectSelfCheckin',
                 setErrorMessage
@@ -212,19 +248,22 @@ const ProjectSelfCheckin = () => {
                     <TextInput
                         mode="outlined"
                         label="Project No"
-                        onPressIn={() => setPopupVisible(true)}
+                        //onPressIn={() => setPopupVisible(true)}
                         value={projectNo}
                         style={{ width: '70%', marginTop: 5 }}
                         placeholder="Enter Project No"
-                        showSoftInputOnFocus={false} />
-                    <ProjectListPopup
+                        //showSoftInputOnFocus={false} 
+                        editable={false} />
+
+                    {/* <ProjectListPopup
                         visible={isPopupVisible}
                         onClose={() => setPopupVisible(false)}
                         onSelect={(project) => {
                             handleProjectSelect(project);
                             setPopupVisible(false);
                         }}
-                    />
+                    /> */}
+
                     <TextInput
                         mode="outlined"
                         label="Project Name"
@@ -238,12 +277,46 @@ const ProjectSelfCheckin = () => {
                     <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
                 </View>
 
-                <View style={styles.imageContainer}>
-                    <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
-                    <Image
-                        source={{ uri: capturedImage }}
-                        style={GlobalStyles.empImageDisplay}
-                    />
+                <View style={GlobalStyles.twoInputContainer}>
+                    <View style={styles.imageContainer}>
+                        <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                        {capturedImage ? (
+                            <Image
+                                source={{ uri: capturedImage }}
+                                style={GlobalStyles.empImageDisplay}
+                            />
+                        ) : (
+                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                                <Text style={styles.placeholderText}>No Image</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.imageContainer}>
+                        <Text style={GlobalStyles.subtitle_1}>
+                            {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
+                                ? "No Match Found"
+                                : ""}
+                        </Text>
+                        {matchedImage ? (
+                            <Image
+                                source={{ uri: matchedImage }}
+                                style={GlobalStyles.empImageDisplay}
+                                onError={(error) => {
+                                    console.log('Image load error:', error);
+                                    setMatchedImage(null);
+                                }}
+                            />
+                        ) : (
+                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                                <Text style={styles.placeholderText}>
+                                    {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
+                                        ? "No Match Found"
+                                        : ""}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 {showCameraModal && (

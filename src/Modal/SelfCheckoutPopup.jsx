@@ -1,12 +1,9 @@
-import { Modal, StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native'
+import { Modal, StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GlobalStyles } from '../Styles/styles';
-import React, { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { callSoapService } from '../SoapRequestAPI/callSoapService';
-import { useAuth } from '../Context/AuthContext';
+import React from 'react';
 
-const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
+const SelfCheckoutPopup = ({ visible, onClose, onSelectOption }) => {
     return (
         <Modal
             visible={visible}
@@ -23,7 +20,7 @@ const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
                     <TouchableOpacity style={styles.modalOption}
                         onPress={() => { onSelectOption('office'); onClose(); }}>
                         <Icon name="office-building" size={24} color="#002D72" />
-                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Office Check-in</Text>
+                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Office Check-out</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -33,15 +30,13 @@ const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
                             onClose();
                         }}                    >
                         <Icon name="file-document" size={24} color="#002D72" />
-                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Project Check-in</Text>
+                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Project Check-out</Text>
                     </TouchableOpacity>
                 </View>
             </TouchableOpacity>
         </Modal>
     )
 }
-
-export default SelfCheckinPopup
 
 const styles = StyleSheet.create({
     modalOverlay: {
@@ -63,5 +58,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
-    }
+    },
 });
+
+export default SelfCheckoutPopup;

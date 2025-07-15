@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, BackHandler, Alert, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, BackHandler, Alert, Dimensions, ScrollView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from 'react-native-paper';
@@ -12,6 +12,9 @@ import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
 import SelfCheckinPopup from '../Modal/SelfCheckinPopup';
+import SelfCheckoutPopup from '../Modal/SelfCheckoutPopup';
+
+const { width, height } = Dimensions.get('window');
 
 const HomeScreen = () => {
     const navigation = useNavigation();
@@ -19,6 +22,7 @@ const HomeScreen = () => {
     const [showPopup, setShowPopup] = useState(false);
     const insets = useSafeAreaInsets();
     const [showSelfCheckinPopup, setShowSelfCheckinPopup] = useState(false);
+    const [showSelfCheckoutPopup, setShowSelfCheckoutPopup] = useState(false);
 
     const handleDPImageCLick = () => {
         setShowPopup(!showPopup);
@@ -27,7 +31,7 @@ const HomeScreen = () => {
     const handleLogout = async () => {
         try {
             await AsyncStorage.clear();
-            
+
             logout();
 
             navigation.replace('Login');
@@ -37,28 +41,23 @@ const HomeScreen = () => {
     };
 
     const handleTeamCheckin = () => {
-        navigation.navigate('TeamCheckin');
+        navigation.navigate('LocationRadiusDetector', { returnTo: 'TeamCheckin' });
     };
 
     const handleTeamCheckout = () => {
-        navigation.navigate('TeamCheckout');
+        navigation.navigate('LocationRadiusDetector', { returnTo: 'TeamCheckout' });
     };
 
     const handleSelfCheckin = () => {
-        //navigation.navigate('SelfCheckin');
         setShowSelfCheckinPopup(true);
     };
 
     const handleSelfCheckout = () => {
-        navigation.navigate('SelfCheckout');
+        setShowSelfCheckoutPopup(true);
     };
 
     const handleAddEmployee = () => {
         navigation.navigate('NewEmployeeAddScreen');
-    };
-
-    const handleViewAttendance = () => {
-        navigation.navigate('ViewAttendance');
     };
 
     const handleChangeEmpImage = () => {
@@ -66,10 +65,18 @@ const HomeScreen = () => {
     };
 
     const handleSelfCheckinSelection = (option) => {
-        if (option.type === 'office') {
-            navigation.navigate('SelfCheckin', { selectedLocation: option.data });
+        if (option === 'office') {
+            navigation.navigate('LocationRadiusDetector', { returnTo: 'SelfCheckin' });
         } else if (option === 'project') {
-            navigation.navigate('ProjectSelfCheckin');
+            navigation.navigate('LocationRadiusDetector', { returnTo: 'ProjectSelfCheckin' });
+        }
+    };
+
+    const handleSelfCheckoutSelection = (option) => {
+        if (option === 'office') {
+            navigation.navigate('LocationRadiusDetector', { returnTo: 'SelfCheckout' });
+        } else if (option === 'project') {
+            navigation.navigate('ProjectSelfCheckout');
         }
     };
 
@@ -87,12 +94,10 @@ const HomeScreen = () => {
     const actions2 = [
         { label: 'Add New Employee', icon: 'user-plus', onPress: handleAddEmployee },
         { label: 'Update Employee Image', icon: 'images', onPress: handleChangeEmpImage },
-        { label: 'View Attendance', icon: 'users-viewfinder', onPress: handleViewAttendance },
-        { label: 'Reports', icon: 'chart-bar', onPress: () => { navigation.navigate('SwitchReportScreen') } },
         { label: 'Add Office Location', icon: 'door-open', onPress: () => { navigation.navigate('AddOfcLocation') } },
+        { label: 'Reports', icon: 'chart-bar', onPress: () => { navigation.navigate('SwitchReportScreen') } },
         { label: 'Leave Request', icon: 'person-walking-arrow-right', onPress: () => { navigation.navigate('LeaveRequest') } },
         { label: 'Shopfloor Tracking', icon: 'chart-bar', onPress: handleShopfloorTracking },
-        { label: 'DPR', icon: 'chart-bar', onPress: () => { navigation.navigate('DPR') } },
         { label: 'DPR', icon: 'chart-bar', onPress: () => { navigation.navigate('DPR') } },
     ];
 
@@ -195,6 +200,12 @@ const HomeScreen = () => {
                     <SelfCheckinPopup visible={showSelfCheckinPopup} onClose={() => setShowSelfCheckinPopup(false)}
                         onSelectOption={handleSelfCheckinSelection} />
                 )}
+
+                {/* Popup for Account Details and Logout */}
+                {showSelfCheckoutPopup && (
+                    <SelfCheckoutPopup visible={showSelfCheckoutPopup} onClose={() => setShowSelfCheckoutPopup(false)}
+                        onSelectOption={handleSelfCheckoutSelection} />
+                )}
             </ScrollView>
         </View>
     );
@@ -258,8 +269,8 @@ const styles = StyleSheet.create({
     },
     popup: {
         position: 'absolute',
-        top: 65,
-        right: 10, // ✅ replace left/transform combo with a fixed right value
+        top: Platform.OS === 'ios' ? 70 : 60, // Adjust based on status bar
+        right: width * 0.05, // 5% from the right
         backgroundColor: 'white',
         borderRadius: 10,
         paddingVertical: 10,
