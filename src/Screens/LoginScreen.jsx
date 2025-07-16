@@ -8,6 +8,7 @@ import { loginBLL } from '../Logics/LoginBLL';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
 import { useAuth } from '../Context/AuthContext';
+import { requestNotificationPermission, displayLocalNotification } from '../Utils/notificationUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ const LoginScreen = ({ navigation }) => {
 
     useEffect(() => {
         loadCredentials();
+        requestNotificationPermission();
     }, []);
 
     const loadCredentials = async () => {
@@ -64,6 +66,11 @@ const LoginScreen = ({ navigation }) => {
                         await AsyncStorage.removeItem('password');
                     }
                     setLoading(false);
+
+                    const title = '✓ Login Success';
+                    const body = 'Continue using Attendance App';
+
+                    displayLocalNotification(title, body);
 
                     const isFirstLogin = await AsyncStorage.getItem('isFirstLogin');
                     if (!isFirstLogin) {
@@ -166,6 +173,7 @@ const LoginScreen = ({ navigation }) => {
                             mode="contained"
                             loading={loading}
                             onPress={handleSoapCall}
+                            //onPress={displayLocalNotification}
                             theme={{ colors: { primary: "#3b82f6" }, disabled: '#3b82f6' }}
                             disabled={loading}
                         >

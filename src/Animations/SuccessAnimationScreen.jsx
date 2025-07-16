@@ -31,7 +31,7 @@ export default function SuccessAnimationScreen() {
         }).start(() => {
           navigation.replace(returnTo, { selectedLocation });
         });
-      }, 2000);
+      }, 3000);
     };
 
     animateAndNavigate();

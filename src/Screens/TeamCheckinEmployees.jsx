@@ -24,7 +24,6 @@ const TeamCheckinEmployees = () => {
 
     const hasNonMatchedFacesRef = useRef(false);
     const [btnloading, setbtnLoading] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [base64Img, setBase64Img] = useState(null);
     const { projectNo, projectName, capturedImage,
         locationName, entryDate, entryTime, coordinates } = route.params || {};

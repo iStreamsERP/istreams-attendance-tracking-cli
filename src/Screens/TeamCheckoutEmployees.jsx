@@ -1,28 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, FlatList, Image, Alert } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Text, View, StyleSheet, FlatList, Alert, Image, Dimensions } from 'react-native';
+import { Button } from 'react-native-paper';
 import Header from '../Components/Header';
-import { callSoapService } from '../SoapRequestAPI/callSoapService';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { GlobalStyles } from '../Styles/styles';
-import { ActivityIndicator, Button, Checkbox } from 'react-native-paper';
-import { SaveAttendance } from '../Utils/SaveAttendance';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
+import { SaveAttendance } from '../Utils/SaveAttendance';
+import { ImageRecognition } from '../Utils/ImageRecognition';
+import ImageRecognitionResult from '../Components/ImageRecognitionResult';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
+import RNFS from 'react-native-fs';
+
+const { width, height } = Dimensions.get('window');
 
 const TeamCheckoutEmployees = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
-    const { projectNo, chosenCheckinDate, entryDate, entryTime, coordinates, locationName, capturedImage } = route.params || {};
+
+    const hasNonMatchedFacesRef = useRef(false);
     const [btnloading, setbtnLoading] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [checkinEmp, setcheckinEmp] = useState([]);
-    const [checkedItems, setCheckedItems] = useState({});
     const [base64Img, setBase64Img] = useState(null);
+    const { projectNo, projectName, capturedImage,
+        locationName, entryDate, entryTime, coordinates } = route.params || {};
     const TrackingStatus = 'checkout';
+    const [selectedEmp, setSelectedEmployees] = useState([]);
+    const [empNo, setEmpNo] = useState([]);
+    const [recogloading, setrecogLoading] = useState(false);
+    const [matchingFaceNames, setMatchingFaceNames] = useState([]);
+    const [cleanedMatchNames, setCleanedMatchNames] = useState([]);
+    const [groupedData, setgroupedData] = useState([]);
     const [errorMessage, setErrorMessage] = useState('');
+    const [empData, setEmpData] = useState('');
 
     const userEmail = userData.userEmail;
     const userName = userData.userName;
@@ -31,94 +43,79 @@ const TeamCheckoutEmployees = () => {
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
 
-    const getCurrentCheckinEmp = async (projectNo, chosenCheckinDate) => {
-        try {
-            setLoading(true);
-            const EmployeeListWithImages = [];
-
-            try {
-                const retCheckinEmp_parameters = {
-                    LogDate: chosenCheckinDate,
-                    PROJECT_NO: projectNo
-                };
-                const CurrentCheckinEmp = await callSoapService(userData.clientURL, 'Retrieve_Project_Current_Employees', retCheckinEmp_parameters);
-
-                console.log('CurrentCheckinEmp', CurrentCheckinEmp);
-
-                for (const emp of CurrentCheckinEmp) {
-                    let empImage = null;
-
-                    try {
-                        // Call SOAP API for employee image
-                        empImage = await callSoapService(userData.clientURL, 'getpic_bytearray', {
-                            EmpNo: emp.emp_no,
-                        });
-
-                    } catch (error) {
-                        console.warn(`Failed to fetch image for ${emp.emp_no}`, error);
-                        empImage = null;
-                    }
-
-                    EmployeeListWithImages.push({
-                        ...emp,
-                        EMP_IMAGE: empImage,
-                    });
-                }
-
-                setcheckinEmp(EmployeeListWithImages);
-
-                const initialChecks = {};
-                CurrentCheckinEmp.forEach(emp => {
-                    initialChecks[emp.emp_no] = false;
-                });
-                setCheckedItems(initialChecks);
-
-            } catch (error) {
-                console.warn(error);
-            }
-        }
-        catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const toggleCheckbox = (empNo) => {
-        setCheckedItems(prevState => ({
-            ...prevState,
-            [empNo]: !prevState[empNo]
-        }));
+    const handleImageRecognition = async () => {
+        await ImageRecognition(
+            capturedImage,
+            userEmail,
+            userName,
+            deviceId,
+            clientURL,
+            setrecogLoading,
+            setBase64Img,
+            setMatchingFaceNames,
+            setCleanedMatchNames,
+            setgroupedData,
+            setErrorMessage);
     };
 
     useEffect(() => {
-        getCurrentCheckinEmp(projectNo, chosenCheckinDate);
-
-        ConvertToBase64();
-    }, []);
-
-    const ConvertToBase64 = async () => {
-        try {
-            const Base64Img = await convertUriToBase64(capturedImage);
-            console.log('Base64Img', Base64Img);
-
-            setBase64Img(Base64Img);
-        } catch (error) {
-            console.error('Error Converting image to Base64:', error);
+        if (capturedImage) {
+            handleImageRecognition();
         }
-    };
-    const SaveTeamCheckout = async () => {
-        setbtnLoading(true);
-        const selectedEmp = checkinEmp.filter(emp => checkedItems[emp.emp_no]);
+    }, [capturedImage]);
 
-        if (selectedEmp.length === 0) {
-            alert('Employee not selected');
+    useEffect(() => {
+        if (errorMessage) {
+            Alert.alert('Error', errorMessage, [
+                { text: 'OK', onPress: () => setErrorMessage('') }
+            ]);
+        }
+    }, [errorMessage]);
+
+    useEffect(() => {
+        if (groupedData && groupedData.length > 0) {
+            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Employee");
+            hasNonMatchedFacesRef.current = hasNonMatchedFaces;
+
+            const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
+            setEmpNo(extractedEmpNos);
+            setSelectedEmployees(extractedEmpNos);
+
+            const empDataXml = extractedEmpNos.map(empNo => `<string>${empNo}</string>`).join('');
+
+            console.log('empDataXml', empDataXml);
+
+            setEmpData(empDataXml);
+
+        }
+    }, [groupedData]);
+
+    const SaveTeamCheckin = async () => {
+        if (!capturedImage) {
+            Alert.alert('Missing required data. Please ensure photo is captured.');
             return;
         }
+        if (!projectNo || !projectName) {
+            Alert.alert('Now Select Project Details to Continue.');
+            return;
+        }
+        if (hasNonMatchedFacesRef.current || !selectedEmp || selectedEmp.length === 0) {
+            Alert.alert('UnMatched Employee Found. Add Employee and try again.');
+            return;
+        }
+        setbtnLoading(true);
 
-        const empData = selectedEmp
-            .map(emp => emp.emp_no ? `<string>${emp.emp_no}</string>` : '')
-            .join('');
+        const base64Img = await convertUriToBase64(capturedImage);
+
+        setBase64Img(base64Img);
+
+        if (capturedImage) {
+            const exists = await RNFS.exists(capturedImage);
+            if (exists) {
+                await RNFS.unlink(capturedImage);
+                console.log('Image deleted from cache:', capturedImage);
+            }
+        }
 
         try {
             await SaveAttendance({
@@ -138,67 +135,57 @@ const TeamCheckoutEmployees = () => {
                 returnTo: 'TeamCheckout',
                 setErrorMessage
             });
-
-            setbtnLoading(false);
         } catch (error) {
+            console.error('Error saving Checkin data:', error);
+        } finally {
             setbtnLoading(false);
-            console.error('Error saving Checkout data:', error);
         }
     };
 
-    useEffect(() => {
-        if (errorMessage) {
-            Alert.alert('Error', errorMessage, [
-                { text: 'OK', onPress: () => setErrorMessage('') }
-            ]);
-        }
-    }, [errorMessage]);
+    const reload = () => {
+        handleImageRecognition();
+    };
+
     return (
         <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Check-out Employees" />
 
-            <View style={styles.employeeListContainer}>
-                {loading ? (
-                    <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="small" color="#0000ff" />
-                    </View>
-                ) : (
-                    <FlatList
-                        data={checkinEmp}
-                        showsVerticalScrollIndicator={false}
-                        keyExtractor={(item, index) => (item.EMP_NO ? item.EMP_NO.toString() : `emp-${index}`)}
-                        renderItem={({ item }) => (
-                            <View style={styles.container}>
-                                <Image
-                                    source={
-                                        item.EMP_IMAGE
-                                            ? { uri: `data:image/png;base64,${item.EMP_IMAGE}` }
-                                            : require('../../assets/human.png')
-                                    }
-                                    style={styles.empImage}
-                                />
-                                <View style={styles.innerContainer}>
-                                    <Text style={[GlobalStyles.txtEmpNo, { color: '#0685de' }]}>{item.emp_no}</Text>
-                                    <Text style={GlobalStyles.txtEmpName}>{item.emp_name}</Text>
-                                    <Text style={GlobalStyles.txtDesignation}>{item.inout_status}</Text>
-                                </View>
-                                <View style={styles.checkBoxSection}>
-                                    <Checkbox
-                                        status={checkedItems[item.emp_no] ? 'checked' : 'unchecked'}
-                                        onPress={() => toggleCheckbox(item.emp_no)}
-                                    />
-                                </View>
-                            </View>
-                        )}
-                    />
-                )}
+            <View style={styles.projectContainer}>
+                <Text style={[GlobalStyles.subtitle_2, { color: '#0685de' }]}> {projectNo}</Text>
+                <Text style={GlobalStyles.subtitle}> {projectName}</Text>
             </View>
+
+            <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
+                <View style={styles.imageContainer}>
+                    <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                    {capturedImage ? (
+                        <Image
+                            source={{ uri: capturedImage }}
+                            style={styles.empImageDisplay}
+                        />
+                    ) : (
+                        <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                            <Text style={styles.placeholderText}>No Image</Text>
+                        </View>
+                    )}
+                </View>
+
+                <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
+            </View> 
+
+            <FlatList
+                data={selectedEmp}
+                keyExtractor={(item) => item.EMP_NO}
+                ListHeaderComponent={
+                    <ImageRecognitionResult recogloading={recogloading} groupedData={groupedData} />
+                }
+            />
 
             <View style={GlobalStyles.bottomButtonContainer}>
                 <Button mode="contained"
-                    onPress={SaveTeamCheckout}
-                    loading={btnloading}
-                    disabled={btnloading}>
+                    onPress={SaveTeamCheckin}
+                    disabled={btnloading}
+                    loading={btnloading}>
                     Save
                 </Button>
             </View>
@@ -207,32 +194,18 @@ const TeamCheckoutEmployees = () => {
 }
 
 const styles = StyleSheet.create({
-    employeeListContainer: {
-        flex: 1,
-        marginVertical: 10
-    },
-    empImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 10,
-    },
-    container: {
-        flexDirection: 'row',
-        backgroundColor: '#dddddb',
-        justifyContent: 'space-between',
+    projectContainer: {
+        backgroundColor: '#d7dff7',
         borderRadius: 15,
         padding: 10,
-        marginBottom: 10
+        marginVertical: 10,
     },
-    innerContainer: {
-        flex: 1,
-        marginLeft: 10,
-        justifyContent: 'center',
-    },
-    checkBoxSection: {
-        justifyContent: 'center',
-        alignItems: 'center',
+    empImageDisplay: {
+        width: width * 0.20,
+        height: width * 0.20,
+        borderRadius: (width * 0.20) / 2,
+        borderWidth: 2,
+        borderColor: '#ddd',
     },
 });
 

@@ -60,6 +60,8 @@ const SelfCheckin = () => {
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
 
+    const domain = userEmail.split('@')[1].split('.')[0];
+
     useEffect(() => {
         const now = new Date();
         setEntryDate(formatDate(now));
@@ -142,7 +144,9 @@ const SelfCheckin = () => {
 
                 // Generate matched image URL for the first matched employee
                 if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
+                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=${domain}&EmpNo=${extractedEmpNos[0]}`;
+                    console.log('Generated matched image URL:', imageUrl);
+                    
                     setMatchedImage(imageUrl);
                 }
             }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, Image, StyleSheet, Dimensions, KeyboardAvoidingView, ScrollView, Platform, Alert
 } from 'react-native';
-import { TextInput, Button, Switch } from 'react-native-paper';
+import { TextInput, Button } from 'react-native-paper';
 import ImageEditPopUp from '../Modal/ImageEditPopUp';
 import { GlobalStyles } from '../Styles/styles';
 const { width, height } = Dimensions.get('window');
@@ -10,7 +10,7 @@ import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../Context/AuthContext';
 import { handleEmpImageUpload, handleEmpImageView } from '../Utils/EmpImageCRUDUtils';
-// import ManPowerSuppListPopUp from '../../Popup/ManPowerSuppListPopUp';
+import ManPowerSuppListPopUp from '../Modal/ManPowerSuppListPopUp';
 
 const EmployeeAddComponent = ({ employee }) => {
   const { userData } = useAuth();
@@ -36,42 +36,36 @@ const EmployeeAddComponent = ({ employee }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // First: When employee prop changes, set all fields
-  useEffect(() => {
-    if (employee) {
-      setEmpNo(employee.EMP_NO);
-      setEmpName(employee.EMP_NAME);
-      setDesignation(employee.DESIGNATION);
-      setManpowerSupp(employee.MANPOWER_SUPPLIER);
-    }
-  }, [employee]);
-
-  // Second: When empNo is set, fetch the image
-  useEffect(() => {
-    const fetchImage = async () => {
-      if (!empNo) return;
-
+  const fetchImage = async (employee) => {
+      if (!employee) return;
+      
       try {
-        const emp = { EMP_NO: empNo };
         const base64Img = await handleEmpImageView(
-          emp,
-          () => { }, () => { }, () => { },
+          employee,
+          setEmpNo,
+          setEmpName,
+          setDesignation,
           userData.userEmail,
           setErrorMessage,
           setAvatar
         );
-
+        console.log(base64Img);
+        
+  
         if (base64Img) {
           setAvatar(base64Img);
         }
-      }
-      catch (err) {
+      } catch (err) {
         setErrorMessage(err.message);
       }
     };
 
-    fetchImage();
-  }, [empNo]);
+  // Second: When empNo is set, fetch the image
+  useEffect(() => {
+    if (employee) {
+      fetchImage(employee);
+    }
+  }, [employee]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -196,16 +190,17 @@ const EmployeeAddComponent = ({ employee }) => {
               value={manpowerSupp}
               onChangeText={setManpowerSupp}
               style={styles.input}
-              placeholder="Select ManPower Supplier" />
+              placeholder="Select ManPower Supplier" 
+              showSoftInputOnFocus={false}/>
 
-            {/* <ManPowerSuppListPopUp
+            <ManPowerSuppListPopUp
               visible={isPopupVisible}
               onClose={() => setPopupVisible(false)}
               onSelect={(manPowerSupp) => {
                 handleManpowerSelect(manPowerSupp);
                 setPopupVisible(false);
               }}
-            /> */}
+            />
           </View>
 
           {/* Image Picker Modal */}

@@ -8,6 +8,8 @@ import TeamCheckin from '../Screens/TeamCheckin';
 import TeamCheckinEmployees from '../Screens/TeamCheckinEmployees';
 import TeamCheckout from '../Screens/TeamCheckout';
 import TeamCheckoutEmployees from '../Screens/TeamCheckoutEmployees';
+import TeamCheckout_Manual from '../Screens/TeamCheckout_Manual';
+import TeamCheckoutEmployees_Manual from '../Screens/TeamCheckoutEmployees_Manual';
 import ProjectSelfCheckin from '../Screens/ProjectSelfCheckin';
 import SelfCheckout from '../Screens/SelfCheckout';
 import NewEmployeeAddScreen from '../Screens/NewEmployeeAddScreen';
@@ -40,6 +42,8 @@ const StackNavigation = () => {
                 <Stack.Screen name="TeamCheckinEmployees" component={TeamCheckinEmployees} />
                 <Stack.Screen name="TeamCheckout" component={TeamCheckout} />
                 <Stack.Screen name="TeamCheckoutEmployees" component={TeamCheckoutEmployees} />
+                <Stack.Screen name="TeamCheckout_Manual" component={TeamCheckout_Manual} />
+                <Stack.Screen name="TeamCheckoutEmployees_Manual" component={TeamCheckoutEmployees_Manual} />
                 <Stack.Screen name="ProjectSelfCheckin" component={ProjectSelfCheckin} />
                 <Stack.Screen name="SelfCheckout" component={SelfCheckout} />
                 <Stack.Screen name="NewEmployeeAddScreen" component={NewEmployeeAddScreen} />

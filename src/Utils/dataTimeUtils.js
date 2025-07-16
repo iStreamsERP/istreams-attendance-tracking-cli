@@ -28,3 +28,8 @@ export const formatNormalTime = (normaldate) => {
     const seconds = String(normaldate.getSeconds()).padStart(2, '0');
     return `${hours}${minutes}${seconds}`; 
 };
+
+export const decodeMicrosoftDate = (msDateString) => {
+    const match = /\/Date\((\d+)\)\//.exec(msDateString);
+    return match ? new Date(parseInt(match[1], 10)) : null;
+};

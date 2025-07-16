@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Alert } from 'react-native';
 
 export const handleEmpImageUpload = async (avatar, empNo, setbtnLoading, userEmail, setErrorMessage) => {
     setbtnLoading(true);
@@ -35,12 +36,12 @@ export const handleEmpImageUpload = async (avatar, empNo, setbtnLoading, userEma
             );
 
             if (updateresponse.data.status === 'Success') {
-                alert('Image Updated Successfully');
+                Alert.alert('Image Updated Successfully');
             }
         }
 
         if (response.data.status === 'Success') {
-            alert('Image Uploaded Successfully');
+            Alert.alert('Image Uploaded Successfully');
         }
     } catch (error) {
         setErrorMessage('Upload Error:', error);

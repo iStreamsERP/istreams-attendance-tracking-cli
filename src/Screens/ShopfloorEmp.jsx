@@ -79,6 +79,8 @@ const ShopfloorEmp = () => {
         setbtnLoading(true);
 
         const empNoList = selectedEmp.map(emp => emp.EMP_NO);
+        const empCount = selectedEmp.length;
+
         const transformedEmpNo = empNoList.join(',,|') + ',,|';
 
         try {
@@ -99,8 +101,14 @@ const ShopfloorEmp = () => {
             console.log(projectCuttinglineResponse);
 
             if (projectCuttinglineResponse === 'Success' && empCuttinglineResponse === 'Success') {
-                Alert.alert('Success', 'Shopfloor employees added successfully.');
-                navigation.navigate('ShopfloorTracking');
+                // Alert.alert('Success', 'Shopfloor employees added successfully.');
+                // navigation.navigate('ShopfloorTracking');
+
+                navigation.navigate('SuccessAnimationScreen', {
+                    message: 'ShopFloor Added Successfully',
+                    details: `Shopfloor for ${empCount} employees added successfully.`,
+                    returnTo: 'ShopfloorTracking' || 'Home',
+                });
             }
             setbtnLoading(false);
         } catch (error) {
