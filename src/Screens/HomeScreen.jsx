@@ -45,7 +45,7 @@ const HomeScreen = () => {
     };
 
     const handleTeamCheckout = () => {
-        navigation.navigate('LocationRadiusDetector', { returnTo: 'TeamCheckout' });
+        navigation.navigate('LocationRadiusDetector', { returnTo: 'SwitchTeamCheckoutScreen' });
     };
 
     const handleSelfCheckin = () => {

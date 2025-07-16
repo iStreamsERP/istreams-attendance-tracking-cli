@@ -32,7 +32,7 @@ export const GlobalStyles = StyleSheet.create({
     },
     fullImage: {
         marginTop: 10,
-        width: width * 0.95,
+        width: width * 0.94,
         height: width * 0.75,
         borderWidth: 2,
         borderColor: '#ddd',
@@ -203,6 +203,12 @@ export const GlobalStyles = StyleSheet.create({
         borderRadius: (width * 0.25) / 2,
         borderWidth: 2,
         borderColor: '#ddd',
+    },
+    height_45: {
+        height: 45,
+    },
+    mt_5:{
+        marginTop: 5,
     },
     // Chip Button for Category
     chip: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, Image } from 'react-native';
+import { Text, View, Image, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../Components/Header';
 import { LocationService } from '../Logics/LocationService';
@@ -109,19 +109,18 @@ const TeamCheckout_Manual = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
-            <Header title="Team Check-out" />
-
+        <ScrollView style={[GlobalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
             <View style={GlobalStyles.locationContainer}>
                 <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
                 <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
             </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
+            <View style={[GlobalStyles.twoInputContainer, { marginTop: 5 }]}>
                 <View style={GlobalStyles.container1}>
                     <TextInput
                         mode="outlined"
                         label="Entry Date"
+                        style={GlobalStyles.height_45}
                         value={entryDate}
                         editable={false}
                     />
@@ -133,12 +132,13 @@ const TeamCheckout_Manual = () => {
                         label="Entry Time"
                         value={entryTime}
                         editable={false}
+                        style={GlobalStyles.height_45}
                         onPressIn={() => setShowTimePicker(true)}
                     />
                 </View>
             </View>
 
-            <Text style={[GlobalStyles.subtitle, { marginTop: 10 }]}>Retrieve Check-in Details here</Text>
+            <Text style={[GlobalStyles.subtitle, GlobalStyles.mt_5]}>Retrieve Check-in Details here</Text>
             <View style={[GlobalStyles.twoInputContainer, { marginVertical: 5 }]}>
                 <TextInput
                     mode="outlined"
@@ -166,6 +166,7 @@ const TeamCheckout_Manual = () => {
                 value={projectName}
                 onChangeText={setProjectName}
                 editable={false}
+                style={GlobalStyles.height_45}
                 placeholder="Enter Project Name" />
 
             <View style={GlobalStyles.camButtonContainer}>
@@ -203,7 +204,7 @@ const TeamCheckout_Manual = () => {
                 onClose={() => setVisible(false)}
                 onDateSelected={handleDateSelected}
             />
-        </View>
+        </ScrollView>
     )
 };
 

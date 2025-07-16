@@ -10,6 +10,7 @@ import TeamCheckout from '../Screens/TeamCheckout';
 import TeamCheckoutEmployees from '../Screens/TeamCheckoutEmployees';
 import TeamCheckout_Manual from '../Screens/TeamCheckout_Manual';
 import TeamCheckoutEmployees_Manual from '../Screens/TeamCheckoutEmployees_Manual';
+import SwitchTeamCheckoutScreen from '../Screens/SwitchTeamCheckoutScreen';
 import ProjectSelfCheckin from '../Screens/ProjectSelfCheckin';
 import SelfCheckout from '../Screens/SelfCheckout';
 import NewEmployeeAddScreen from '../Screens/NewEmployeeAddScreen';
@@ -44,6 +45,7 @@ const StackNavigation = () => {
                 <Stack.Screen name="TeamCheckoutEmployees" component={TeamCheckoutEmployees} />
                 <Stack.Screen name="TeamCheckout_Manual" component={TeamCheckout_Manual} />
                 <Stack.Screen name="TeamCheckoutEmployees_Manual" component={TeamCheckoutEmployees_Manual} />
+                <Stack.Screen name="SwitchTeamCheckoutScreen" component={SwitchTeamCheckoutScreen} />
                 <Stack.Screen name="ProjectSelfCheckin" component={ProjectSelfCheckin} />
                 <Stack.Screen name="SelfCheckout" component={SelfCheckout} />
                 <Stack.Screen name="NewEmployeeAddScreen" component={NewEmployeeAddScreen} />

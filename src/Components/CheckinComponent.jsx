@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, Image } from 'react-native';
+import { Text, View, Image, ScrollView } from 'react-native';
 import { Provider as PaperProvider, TextInput, Button } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
 import ManualImageCaptureModal from '../Modal/ManualImageCaptureModal';
@@ -77,19 +77,20 @@ const CheckinComponent = ({
     };
 
     return (
-        <PaperProvider>
+        <View>
             <View style={GlobalStyles.locationContainer}>
                 <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
                 <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
             </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
+            <View style={[GlobalStyles.twoInputContainer, { marginTop: 5 }]}>
                 <View style={GlobalStyles.container1}>
                     <TextInput
                         mode="outlined"
                         label="Entry Date"
                         value={entryDate}
                         editable={false}
+                        style={{ height: 45 }}
                         onPressIn={() => setShowDatePicker(true)}
                     />
                 </View>
@@ -100,19 +101,20 @@ const CheckinComponent = ({
                         label="Entry Time"
                         value={entryTime}
                         editable={false}
+                        style={{ height: 45 }}
                         onPressIn={() => setShowTimePicker(true)}
                     />
                 </View>
             </View>
 
-            <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
+            <Text style={[GlobalStyles.subtitle_1, { marginTop: 5 }]}>Project Details</Text>
             <View>
                 <TextInput
                     mode="outlined"
                     label="Project No"
                     onPressIn={() => setPopupVisible(true)}
                     value={projectNo}
-                    style={{ width: '70%', marginTop: 5 }}
+                    style={{ width: '70%', marginTop: 5, height: 45 }}
                     placeholder="Enter Project No"
                     editable={false} />
                 {/* <ProjectListPopup
@@ -128,6 +130,7 @@ const CheckinComponent = ({
                     label="Project Name"
                     value={projectName}
                     showSoftInputOnFocus={false}
+                    style={{ height: 45 }}
                     placeholder="Enter Project Name" />
             </View>
             <View style={GlobalStyles.camButtonContainer}>
@@ -141,13 +144,13 @@ const CheckinComponent = ({
                     onCapture={handleCapture}
                 />
             </View>
-            <View style={GlobalStyles.imageContainer}>
+            <View style={GlobalStyles.flex_1}>
                 <Image
                     source={{ uri: capturedImage }}
                     style={GlobalStyles.fullImage}
                 />
             </View>
-        </PaperProvider>
+        </View>
     )
 }
 

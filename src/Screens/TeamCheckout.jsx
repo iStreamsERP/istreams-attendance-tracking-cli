@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Alert } from 'react-native';
+import { View, Alert, ScrollView } from 'react-native';
 import { Button } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
 import Header from '../Components/Header';
@@ -8,10 +8,10 @@ import CheckinComponent from '../Components/CheckinComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionsAndroid, Platform } from 'react-native';
 
-const TeamCheckout = ({ route }) => {
+const TeamCheckout = ({ selectedLocation }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const { selectedLocation } = route.params || {};
+    //const { selectedLocation } = route.params || {};
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
     const [projectNo, setProjectNo] = useState('');
@@ -69,8 +69,7 @@ const TeamCheckout = ({ route }) => {
         }
     };
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
-            <Header title="Team Check-out" />
+        <ScrollView style={[GlobalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
 
             <CheckinComponent
                 entryDate={entryDate}
@@ -97,7 +96,7 @@ const TeamCheckout = ({ route }) => {
                     Next
                 </Button>
             </View>
-        </View>
+        </ScrollView>
     );
 };
 
