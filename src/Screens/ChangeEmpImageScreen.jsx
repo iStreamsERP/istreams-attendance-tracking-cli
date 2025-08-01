@@ -12,11 +12,15 @@ import { handleEmpImageUpload, handleEmpImageView } from '../Utils/EmpImageCRUDU
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 
 
 const ChangeEmpImageScreen = () => {
   const navigation = useNavigation();
   const { userData } = useAuth();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const globalStyles = GlobalStyles(colors);
   const [btnloading, setbtnLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [avatar, setAvatar] = useState(null);
@@ -58,9 +62,9 @@ const ChangeEmpImageScreen = () => {
   const uploadImage = async () => {
     try {
       await handleEmpImageUpload(
-        avatar, 
-        empNo, 
-        setbtnLoading, 
+        avatar,
+        empNo,
+        setbtnLoading,
         userData.userEmail,
         setErrorMessage
       );
@@ -85,28 +89,28 @@ const ChangeEmpImageScreen = () => {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           {/* Shimmer for Profile Image */}
-          <View style={styles.profileContainer}>
-            <View style={styles.imageContainer}>
+          <View style={globalStyles.centerRoundImgContainer}>
+            <View style={globalStyles.centerRoundImg}>
               <ShimmerPlaceholder
                 LinearGradient={LinearGradient}
-                style={styles.image}
-                shimmerStyle={styles.image}
+                style={globalStyles.roundImg}
+                shimmerStyle={globalStyles.roundImg}
                 visible={false}
               />
             </View>
           </View>
 
           {/* Shimmer for Inputs */}
-          <View style={styles.inputContainer}>
-            <ShimmerPlaceholder LinearGradient={LinearGradient} style={GlobalStyles.shimmerInput} />
-            <ShimmerPlaceholder LinearGradient={LinearGradient} style={GlobalStyles.shimmerInput} />
-            <ShimmerPlaceholder LinearGradient={LinearGradient} style={GlobalStyles.shimmerInput} />
+          <View style={[globalStyles.flex_1, globalStyles.my_10]}>
+            <ShimmerPlaceholder LinearGradient={LinearGradient} style={globalStyles.shimmerInput} />
+            <ShimmerPlaceholder LinearGradient={LinearGradient} style={globalStyles.shimmerInput} />
+            <ShimmerPlaceholder LinearGradient={LinearGradient} style={globalStyles.shimmerInput} />
           </View>
         </ScrollView>
 
         {/* Shimmer for Button */}
-        <View style={GlobalStyles.bottomButtonContainer}>
-          <ShimmerPlaceholder LinearGradient={LinearGradient} style={GlobalStyles.shimmerButton} />
+        <View style={globalStyles.bottomButtonContainer}>
+          <ShimmerPlaceholder LinearGradient={LinearGradient} style={globalStyles.shimmerButton} />
         </View>
       </KeyboardAvoidingView>
     );
@@ -117,31 +121,32 @@ const ChangeEmpImageScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1, marginTop: 10 }}
     >
-      <View style={styles.innerContainer}>
+      <View style={globalStyles.flex_1}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          <View style={styles.profileContainer}>
-            <View style={styles.imageContainer}>
+          <View style={globalStyles.centerRoundImgContainer}>
+            <View style={globalStyles.centerRoundImg}>
               <Image
                 source={
                   avatar ? { uri: avatar } : require("../../assets/images.png")
                 }
-                style={styles.image}
+                style={globalStyles.roundImg}
               />
             </View>
           </View>
 
-          <View style={styles.inputContainer}>
-            <View style={GlobalStyles.twoInputContainer}>
+          <View style={[globalStyles.flex_1, globalStyles.my_10]}>
+            <View style={[globalStyles.twoInputContainer, globalStyles.mb_10]}>
               <TextInput
                 mode="outlined"
                 label="Emp No"
                 value={empNo}
+                theme={theme}
                 onChangeText={setEmpNo}
                 editable={false}
-                style={GlobalStyles.container1}
+                style={globalStyles.container1}
                 placeholder="Enter Emp No" />
 
-              <View style={GlobalStyles.camButtonContainer}>
+              <View style={globalStyles.camButtonContainer}>
                 <Button
                   icon="plus"
                   mode="contained-tonal"
@@ -170,16 +175,18 @@ const ChangeEmpImageScreen = () => {
               mode="outlined"
               label="Emp Name"
               value={empName}
+              theme={theme}
               onChangeText={setEmpName}
-              style={GlobalStyles.textInput}
+              style={globalStyles.mb_10}
               placeholder="Enter Emp Name" />
 
             <TextInput
               mode="outlined"
               label="Designation"
               value={designation}
+              theme={theme}
               onChangeText={setDesignation}
-              style={styles.input}
+              style={globalStyles.input}
               placeholder="Enter Designation" />
           </View>
 
@@ -190,9 +197,15 @@ const ChangeEmpImageScreen = () => {
           />
         </ScrollView>
 
-        <View style={GlobalStyles.bottomButtonContainer}>
+        <View style={globalStyles.bottomButtonContainer}>
           <Button mode="contained"
             onPress={uploadImage}
+            theme={{
+              colors: {
+                primary: colors.primary,
+                disabled: colors.lightGray, // <- set your desired disabled color
+              },
+            }}
             disabled={btnloading}
             loading={btnloading}>
             Save
@@ -204,35 +217,6 @@ const ChangeEmpImageScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  innerContainer: {
-    flex: 1,
-  },
-  profileContainer: {
-    alignSelf: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageContainer: {
-    width: width * 0.35,
-    height: width * 0.35,
-    borderRadius: (width * 0.35) / 2,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: (width * 0.35) / 2,
-  },
-  inputContainer: {
-    flex: 1,
-    marginVertical: 10,
-  },
-  input: {
-    marginBottom: 10,
-    height: height * 0.07,
-  },
   iconContainer: {
     position: 'absolute',
     bottom: 5,

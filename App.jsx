@@ -1,15 +1,16 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Alert } from 'react-native'
 import React, { useEffect } from 'react'
 import StackNavigation from './src/Navigation/StackNavigation'
 import { AuthProvider } from './src/Context/AuthContext';
 import { CheckinProvider } from './src/Context/CheckinContext';
-import { Alert } from 'react-native';
+import { ThemeProvider } from './src/Context/ThemeContext';
 import { messaging } from './firebaseConfig';
 import {
   requestUserPermission,
   NotificationListener,
   getToken
 } from './src/Utils/notificationUtils';
+import { useColorScheme } from 'react-native';
 
 const App = () => {
   useEffect(() => {
@@ -31,7 +32,9 @@ const App = () => {
   return (
     <AuthProvider>
       <CheckinProvider>
+        <ThemeProvider>
         <StackNavigation />
+        </ThemeProvider>
       </CheckinProvider>
     </AuthProvider>
   );

@@ -10,12 +10,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import { decodeMicrosoftDate } from '../Utils/dataTimeUtils';
+import { useTheme } from '../Context/ThemeContext';
 
 const TeamCheckoutEmployees_Manual = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const { projectNo, chosenCheckinDate, entryDate, entryTime, coordinates, locationName, capturedImage } = route.params || {};
     const [btnloading, setbtnLoading] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -42,6 +46,11 @@ const TeamCheckoutEmployees_Manual = () => {
                 PROJECT_NO: projectNo
             };
             const CurrentCheckinEmp = await callSoapService(userData.clientURL, 'Retrieve_Project_Current_Employees', retCheckinEmp_parameters);
+
+            if (CurrentCheckinEmp.length === 0) {
+                Alert.alert('No Employee Found', 'Check the Project No and Check-in Date');
+                return;
+            }
 
             for (const emp of CurrentCheckinEmp) {
                 let empImage = null;
@@ -105,6 +114,7 @@ const TeamCheckoutEmployees_Manual = () => {
     };
     const SaveTeamCheckout = async () => {
         setbtnLoading(true);
+        
         const selectedEmp = checkinEmp.filter(emp => checkedItems[emp.emp_no]);
 
         if (selectedEmp.length === 0) {
@@ -131,14 +141,15 @@ const TeamCheckoutEmployees_Manual = () => {
                 selectedEmp: empData,
                 base64Img: base64Img,
                 navigation,
-                returnTo: 'TeamCheckout',
+                returnTo: 'SwitchTeamCheckoutScreen',
                 setErrorMessage
             });
-
-            setbtnLoading(false);
         } catch (error) {
             setbtnLoading(false);
             console.error('Error saving Checkout data:', error);
+        }
+        finally {
+            setbtnLoading(false);
         }
     };
 
@@ -150,13 +161,13 @@ const TeamCheckoutEmployees_Manual = () => {
         }
     }, [errorMessage]);
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Check-out Employees" />
 
             <View style={styles.employeeListContainer}>
                 {loading ? (
                     <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="small" color="#0000ff" />
+                        <ActivityIndicator size="small" color={colors.primary} />
                     </View>
                 ) : (
                     <FlatList
@@ -164,7 +175,7 @@ const TeamCheckoutEmployees_Manual = () => {
                         showsVerticalScrollIndicator={false}
                         keyExtractor={(item, index) => (item.EMP_NO ? item.EMP_NO.toString() : `emp-${index}`)}
                         renderItem={({ item }) => (
-                            <View style={styles.container}>
+                            <View style={[styles.container, { backgroundColor: colors.card }]}>
                                 <Image
                                     source={
                                         item.EMP_IMAGE
@@ -174,16 +185,17 @@ const TeamCheckoutEmployees_Manual = () => {
                                     style={styles.empImage}
                                 />
                                 <View style={styles.innerContainer}>
-                                    <Text style={[GlobalStyles.subtitle, { color: '#0685de' }]}>{item.emp_no}</Text>
-                                    <Text style={GlobalStyles.subtitle_2}>{item.emp_name}</Text>
-                                    <View style={GlobalStyles.twoInputContainer}>
-                                        <Text style={GlobalStyles.subtitle_3}>{item.inout_status}</Text>
-                                        <Text style={GlobalStyles.subtitle_3}>{item.log_datetime.toLocaleString()}</Text>
+                                    <Text style={[globalStyles.subtitle, { color: colors.primary }]}>{item.emp_no}</Text>
+                                    <Text style={globalStyles.subtitle_2}>{item.emp_name}</Text>
+                                    <View style={globalStyles.twoInputContainer}>
+                                        <Text style={globalStyles.subtitle_3}>{item.inout_status}</Text>
+                                        <Text style={globalStyles.subtitle_3}>{item.log_datetime.toLocaleString()}</Text>
                                     </View>
                                 </View>
                                 <View style={styles.checkBoxSection}>
                                     <Checkbox
                                         status={checkedItems[item.emp_no] ? 'checked' : 'unchecked'}
+                                        color={colors.primary}
                                         onPress={() => toggleCheckbox(item.emp_no)}
                                     />
                                 </View>
@@ -193,10 +205,16 @@ const TeamCheckoutEmployees_Manual = () => {
                 )}
             </View>
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveTeamCheckout}
                     loading={btnloading}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     disabled={btnloading}>
                     Save
                 </Button>
@@ -218,7 +236,6 @@ const styles = StyleSheet.create({
     },
     container: {
         flexDirection: 'row',
-        backgroundColor: '#dddddb',
         justifyContent: 'space-between',
         borderRadius: 15,
         padding: 10,

@@ -5,9 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import React, { useState } from 'react'
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6'
 import { Searchbar } from 'react-native-paper'
+import { useTheme } from '../Context/ThemeContext'
 
 const AllEmpReportScreen = () => {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     // Calendar states
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -263,7 +267,7 @@ const AllEmpReportScreen = () => {
 
     return (
         <PaperProvider>
-            <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+            <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
                 <View style={styles.container}>
                     {/* Top Controls Section */}
                     <View style={styles.topControlsContainer}>
@@ -350,7 +354,7 @@ const AllEmpReportScreen = () => {
                     </View>
 
                     {/* Table Search and Container */}
-                    <View style={GlobalStyles.twoInputContainer}>
+                    <View style={globalStyles.twoInputContainer}>
                         <View>
                             <Text style={{ marginTop: 5, fontSize: 14, color: '#666', fontWeight: '600' }}>Search Table :</Text>
                         </View>

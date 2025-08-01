@@ -1,10 +1,8 @@
-import { Dimensions, Image, ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
+import { Dimensions, Image, ScrollView, View, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, Button, Card } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Header from '../Components/Header';
-const { width } = Dimensions.get('window');
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlobalStyles } from '../Styles/styles';
 import LeaveTypeListPopup from '../Modal/LeaveTypeListPopUp';
 import CategoryListPopUp from '../Modal/CategoryListPopUp';
@@ -12,10 +10,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
 import { convertDataModelToStringData } from '../Utils/dataModelConverter';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 
 const LeaveRequest = ({ employee }) => {
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
+
     const [loading, setLoading] = useState(true);
     const [empData, setEmpData] = useState({ empNo: '', empName: '', designation: '' });
     const [leaveType, setLeaveType] = useState('');
@@ -37,20 +40,20 @@ const LeaveRequest = ({ employee }) => {
     useEffect(() => {
         const fetchEmployeeData = async () => {
             try {
-                const User_EmpNo = userData.userEmployeeNo;
-                const storedData = await AsyncStorage.getItem('EmployeeList');
+                const GetMatched_EmpParameter = {
+                    EmpNo: userData.userEmployeeNo
+                };
 
-                if (storedData) {
-                    const parsedData = JSON.parse(storedData);
-                    const employee = parsedData.find(emp => emp.EMP_NO === User_EmpNo);
+                const GetMatched_EmpList = await callSoapService(userData.clientURL, 'Get_Emp_BasicInfo', GetMatched_EmpParameter);
 
-                    if (employee) {
-                        setEmpData({
-                            empNo: employee.EMP_NO || '',
-                            empName: employee.EMP_NAME || '',
-                            designation: employee.DESIGNATION || '',
-                        });
-                    }
+                const employee = GetMatched_EmpList[0];
+
+                if (employee) {
+                    setEmpData({
+                        empNo: employee.EMP_NO || '',
+                        empName: employee.EMP_NAME || '',
+                        designation: employee.DESIGNATION || '',
+                    });
                 }
             } catch (error) {
                 console.error('Error fetching employee data:', error);
@@ -177,250 +180,177 @@ const LeaveRequest = ({ employee }) => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title='Leave Request' />
-            <View style={styles.innerContainer}>
-
+            <View style={globalStyles.flex_1}>
                 <ScrollView
-                    contentContainerStyle={styles.scrollContainer}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.profileContainer}>
-                        <View style={styles.imageContainer}>
+                    <View style={globalStyles.centerRoundImgContainer}>
+                        <View style={globalStyles.centerRoundImg}>
                             <Image
                                 source={{ uri: `data:image/jpeg;base64,${userData.userAvatar}` }}
-                                style={styles.image}
+                                style={globalStyles.roundImg}
                             />
                         </View>
                     </View>
 
-                    <Card style={styles.summaryCard}>
+                    <Card style={[globalStyles.summaryCard, { backgroundColor: colors.card }]}>
                         <Card.Content>
-                            <View style={styles.summaryRow}>
-                                <View style={styles.summaryItem}>
-                                    <Text style={styles.summaryLabel}>Emp No</Text>
-                                    <Text style={styles.summaryValue}>{empData.empNo || 'N/A'}</Text>
+                            <View style={globalStyles.summaryRow}>
+                                <View style={globalStyles.summaryItem}>
+                                    <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp No</Text>
+                                    <Text style={[globalStyles.subtitle_2, globalStyles.txt_center, { color: colors.primary }]}>{empData.empNo || 'N/A'}</Text>
                                 </View>
-                                <View style={styles.summaryItem}>
-                                    <Text style={styles.summaryLabel}>Emp Name</Text>
-                                    <Text style={styles.summaryValue} numberOfLines={1} ellipsizeMode="tail">
-                                        {empData.empName || 'N/A'}
-                                    </Text>
+
+                                <View style={globalStyles.summaryItem}>
+                                    <Text style={[globalStyles.content1, globalStyles.txt_center]}>Designation</Text>
+                                    <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>{empData.designation || 'N/A'}</Text>
                                 </View>
-                                <View style={styles.summaryItem}>
-                                    <Text style={styles.summaryLabel}>Designation</Text>
-                                    <Text style={styles.summaryValue}>{empData.designation || 'N/A'}</Text>
-                                </View>
+                            </View>
+
+                            <View style={globalStyles.summaryItem}>
+                                <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp Name</Text>
+                                <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>
+                                    {empData.empName || 'N/A'}
+                                </Text>
                             </View>
                         </Card.Content>
                     </Card>
 
-                    <Text style={[GlobalStyles.subtitle_1, { marginTop: 5 }]}>Leave application</Text>
+                    <Text style={[globalStyles.subtitle_1]}>Leave application</Text>
 
-                    <View style={styles.inputContainer}>
+                    <View style={globalStyles.flex_1}>
                         {/* Leave Type Dropdown */}
-                        <View style={styles.dropdownContainer}>
-                            <TouchableOpacity onPress={() => setLeaveTypeVisible(true)}>
-                                <TextInput
-                                    mode="outlined"
-                                    label="Leave Type"
-                                    value={leaveType}
-                                    editable={false}
-                                    right={<TextInput.Icon icon="chevron-down" />}
-                                    style={GlobalStyles.container1}
-                                    onPress={() => setLeaveTypeVisible(true)}
-                                    pointerEvents="none"
-                                />
-                            </TouchableOpacity>
-                            <LeaveTypeListPopup
-                                visible={leaveTypeVisible}
-                                onClose={() => setLeaveTypeVisible(false)}
-                                onSelect={(leaveType) => {
-                                    onLeaveSelect(leaveType);
-                                    setLeaveTypeVisible(false);
-                                }}
+                        <TouchableOpacity onPress={() => setLeaveTypeVisible(true)}>
+                            <TextInput
+                                mode="outlined"
+                                label="Leave Type"
+                                value={leaveType}
+                                editable={false}
+                                theme={theme}
+                                right={<TextInput.Icon color={colors.text} icon="chevron-down" />}
+                                style={globalStyles.container1}
+                                onPress={() => setLeaveTypeVisible(true)}
+                                pointerEvents="none"
                             />
-                        </View>
+                        </TouchableOpacity>
 
-                        {/* Category Dropdown */}
-                        <View style={styles.dropdownContainer}>
-                            <Text style={[GlobalStyles.subtitle_2, { marginTop: 10 }]}>Select Category</Text>
+                        <Text style={[globalStyles.subtitle_2, { marginTop: 10 }]}>Select Category</Text>
 
-                            <CategoryListPopUp
-                                onSelect={(category) => {
-                                    onLeaveCategorySelect(category);
-                                }}
-                                selectedCategory={category}
-                                leaveType={leaveType}
-                            />
-                        </View>
+                        <CategoryListPopUp
+                            onSelect={(category) => {
+                                onLeaveCategorySelect(category);
+                            }}
+                            selectedCategory={category}
+                            leaveType={leaveType}
+                        />
 
                         {/* Date Inputs */}
-                        <View style={[GlobalStyles.twoInputContainer, { marginTop: 6 }]}>
-                            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                        <View style={[globalStyles.twoInputContainer, globalStyles.mb_10]}>
+                            <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={globalStyles.flex_1}>
                                 <TextInput
                                     mode="outlined"
                                     label="Start Date"
                                     value={startDate}
                                     editable={false}
-                                    style={GlobalStyles.container1}
+                                    theme={theme}
+                                    style={globalStyles.container1}
                                     placeholder="DD/MM/YYYY"
-                                    right={<TextInput.Icon icon="calendar" onPress={() => setShowStartDatePicker(true)} />}
+                                    right={<TextInput.Icon color={colors.text} icon="calendar" onPress={() => setShowStartDatePicker(true)} />}
                                     pointerEvents="none"
                                 />
                             </TouchableOpacity>
 
-                            {/* Total Days */}
-                            <TextInput
-                                mode="outlined"
-                                label="Total Days"
-                                value={totalDays}
-                                editable={false}
-                                style={styles.totalDaysInput}
-                            />
-                        </View>
-
-                        <View style={GlobalStyles.twoInputContainer}>
-                            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+                            <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={globalStyles.flex_1}>
                                 <TextInput
                                     mode="outlined"
                                     label="End Date"
                                     value={endDate}
                                     editable={false}
-                                    style={GlobalStyles.container1}
+                                    theme={theme}
+                                    style={globalStyles.container2}
                                     placeholder="DD/MM/YYYY"
-                                    right={<TextInput.Icon icon="calendar" onPress={() => setShowEndDatePicker(true)} />}
+                                    right={<TextInput.Icon color={colors.text} icon="calendar" onPress={() => setShowEndDatePicker(true)} />}
                                     pointerEvents="none"
                                 />
                             </TouchableOpacity>
                         </View>
 
-                        <View style={GlobalStyles.twoInputContainer}>
-                            <TextInput
-                                multiline
-                                mode="outlined"
-                                label="Enter EMP_REMARKS"
-                                style={GlobalStyles.container1}
-                                numberOfLines={4}
-                                value={remarks}
-                                onChangeText={setRemarks}
-                            />
-                        </View>
+                        {/* Total Days */}
+                        <TextInput
+                            mode="outlined"
+                            label="Total Days"
+                            value={totalDays}
+                            theme={theme}
+                            editable={false}
+                            style={[globalStyles.container2, globalStyles.mb_10, { width: '70%' }]}
+                        />
+
+                        <TextInput
+                            multiline
+                            mode="outlined"
+                            label="Enter EMP_REMARKS"
+                            style={globalStyles.container1}
+                            theme={theme}
+                            numberOfLines={4}
+                            value={remarks}
+                            onChangeText={setRemarks}
+                        />
                     </View>
-
-                    {/* Date Pickers */}
-                    {showStartDatePicker && (
-                        <DateTimePicker
-                            value={startDateObj}
-                            mode="date"
-                            display="default"
-                            onChange={onStartDateChange}
-                            minimumDate={new Date()}
-                        />
-                    )}
-
-                    {showEndDatePicker && (
-                        <DateTimePicker
-                            value={endDateObj}
-                            mode="date"
-                            display="default"
-                            onChange={onEndDateChange}
-                            minimumDate={startDateObj}
-                        />
-                    )}
                 </ScrollView>
 
+                <LeaveTypeListPopup
+                    visible={leaveTypeVisible}
+                    onClose={() => setLeaveTypeVisible(false)}
+                    onSelect={(leaveType) => {
+                        onLeaveSelect(leaveType);
+                        setLeaveTypeVisible(false);
+                    }}
+                />
+
+                {/* Date Pickers */}
+                {showStartDatePicker && (
+                    <DateTimePicker
+                        value={startDateObj}
+                        mode="date"
+                        display="default"
+                        onChange={onStartDateChange}
+                        minimumDate={new Date()}
+                    />
+                )}
+
+                {showEndDatePicker && (
+                    <DateTimePicker
+                        value={endDateObj}
+                        mode="date"
+                        display="default"
+                        onChange={onEndDateChange}
+                        minimumDate={startDateObj}
+                    />
+                )}
+
                 {/* Action Buttons */}
-                <View style={GlobalStyles.bottomButtonContainer}>
+                <View style={globalStyles.bottomButtonContainer}>
                     <Button
                         mode="contained"
                         onPress={handleSubmit}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
                         loading={btnLoading}
                         disabled={btnLoading}
                     >
                         Submit
                     </Button>
                 </View>
-            </View>
-        </View>
+            </View >
+        </View >
     );
 };
 
 export default LeaveRequest;
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-    innerContainer: {
-        flex: 1,
-    },
-    inputContainer: {
-        flex: 1,
-        marginVertical: 10,
-    },
-    //image
-    profileContainer: {
-        alignSelf: 'center',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    imageContainer: {
-        width: width * 0.30,
-        height: width * 0.30,
-        borderRadius: (width * 0.30) / 2,
-        backgroundColor: '#e0e0e0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    image: {
-        width: '100%',
-        height: '100%',
-        borderRadius: (width * 0.35) / 2,
-    },
-    //card
-    summaryCard: {
-        marginTop: 15,
-        marginBottom: 10,
-        elevation: 2,
-        width: '97%',
-        alignSelf: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap'
-    },
-    summaryItem: {
-        minWidth: '30%',
-        alignItems: 'center',
-        paddingHorizontal: 5,
-        marginBottom: 5
-    },
-    summaryLabel: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 4,
-    },
-    summaryValue: {
-        fontSize: 13,
-        fontFamily: 'Inter-Bold',
-        color: '#333',
-        textAlign: 'center',
-    },
-
-    dropdownContainer: {
-        flex: 1,
-        position: 'relative',
-    },
-
-    totalDaysInput: {
-        width: '30%',
-        marginRight: '10'
-    },
-});

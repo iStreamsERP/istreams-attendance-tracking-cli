@@ -42,6 +42,15 @@ const LoadData = async (taskKey, clientURL) => {
 
             await AsyncStorage.setItem('ManPowerSupplierList', JSON.stringify(ManPowerSupplierList));
         }
+        if (taskKey === 'fetchDesignationMaster') {
+            const Designation_SQLQueryParameter = {
+                SQLQuery: 'SELECT DESIGNATION from designation_master'
+            };
+
+            const DesignationMasterList = await callSoapService(clientURL, 'DataModel_GetDataFrom_Query', Designation_SQLQueryParameter);
+
+            await AsyncStorage.setItem('DesignationMasterList', JSON.stringify(DesignationMasterList));
+        }
         if (taskKey === 'fetchDeskArea') {
             const DeskAreaList = await callSoapService(clientURL, 'GetAllDeskAreaList', '');
 

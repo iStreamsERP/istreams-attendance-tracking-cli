@@ -9,12 +9,18 @@ import { GlobalStyles } from '../Styles/styles';
 import EmployeeListCard from '../Components/EmployeeListCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
+import { escapeXml } from '../Utils/UriToBase64Utils';
 
 const ShopfloorEmp = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
+
     const [btnloading, setbtnLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const { deskArea, cuttingLineNo, sectionName, projectNo,
@@ -66,15 +72,6 @@ const ShopfloorEmp = () => {
         console.log(transformedEmpNo);
     };
 
-    const escapeXml = (unsafe) => {
-        return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&apos;");
-    };
-
     const SaveShopfloor = async () => {
         setbtnLoading(true);
 
@@ -107,7 +104,7 @@ const ShopfloorEmp = () => {
                 navigation.navigate('SuccessAnimationScreen', {
                     message: 'ShopFloor Added Successfully',
                     details: `Shopfloor for ${empCount} employees added successfully.`,
-                    returnTo: 'ShopfloorTracking' || 'Home',
+                    returnTo: 'ShopfloorTracking' || 'Home1',
                 });
             }
             setbtnLoading(false);
@@ -118,26 +115,27 @@ const ShopfloorEmp = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Add Shopfloor Employees" />
 
-            <View style={styles.projectContainer}>
-                <View style={[GlobalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
-                    <Text style={[GlobalStyles.subtitle_2]}>Desk Area No:</Text>
-                    <Text style={[GlobalStyles.subtitle_2, { color: '#873e23' }]}> {deskArea}</Text>
+            <View style={globalStyles.projectContainer}>
+                <View style={[globalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
+                    <Text style={[globalStyles.subtitle_2]}>Desk Area No:</Text>
+                    <Text style={[globalStyles.subtitle_2, { color: colors.primary }]}> {deskArea}</Text>
                 </View>
 
-                <View style={[GlobalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
-                    <Text style={[GlobalStyles.subtitle_2]}>CuttingLine No:</Text>
-                    <Text style={[GlobalStyles.subtitle_2, { color: '#873e23' }]}> {cuttingLineNo}</Text>
+                <View style={[globalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
+                    <Text style={[globalStyles.subtitle_2]}>CuttingLine No:</Text>
+                    <Text style={[globalStyles.subtitle_2, { color: colors.primary }]}> {cuttingLineNo}</Text>
                 </View>
             </View>
 
 
-            <View style={GlobalStyles.camButtonContainer}>
+            <View style={globalStyles.camButtonContainer}>
                 <Button
                     icon="plus"
                     mode="contained-tonal"
+                    theme={theme}
                     onPress={() =>
                         navigation.navigate('EmployeeList', {
                             onSelect: async (employees) => {
@@ -150,7 +148,7 @@ const ShopfloorEmp = () => {
                 </Button>
             </View>
 
-            <View style={{ flex: 1 , marginVertical: 10}}>
+            <View style={{ flex: 1, marginVertical: 10 }}>
                 <EmployeeListCard
                     loading={loading}
                     selectedEmp={selectedEmp}
@@ -158,9 +156,15 @@ const ShopfloorEmp = () => {
             </View>
 
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveShopfloor}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     disabled={btnloading}
                     loading={btnloading}>
                     Save

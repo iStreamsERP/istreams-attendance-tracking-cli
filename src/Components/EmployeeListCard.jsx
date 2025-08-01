@@ -9,13 +9,17 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { GlobalStyles } from '../Styles/styles';
+import { useTheme } from '../Context/ThemeContext';
 
-const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {    
+const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     return (
         <View style={styles.employeeListContainer}>
             {loading ? (
                 <View style={styles.loaderContainer}>
-                    <ActivityIndicator size="large" color="#0000ff" />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             ) : (
                 <>
@@ -26,7 +30,7 @@ const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 onPress={() => onPress?.(item)}
-                                style={styles.container}>
+                                style={[styles.container, { backgroundColor: colors.card }]}>
                                 <Image
                                     source={
                                         item.EMP_IMAGE
@@ -40,9 +44,9 @@ const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
                                     style={styles.empImage}
                                 />
                                 <View style={styles.innerContainer}>
-                                    <Text style={[GlobalStyles.subtitle_3, { color: '#1d4fbb' }]}>{item.EMP_NO}</Text>
-                                    <Text style={GlobalStyles.subtitle_3}>{item.EMP_NAME}</Text>
-                                    <Text style={GlobalStyles.subtitle_4}>{item.DESIGNATION}</Text>
+                                    <Text style={[globalStyles.subtitle_3, { color: colors.primary }]}>{item.EMP_NO}</Text>
+                                    <Text style={globalStyles.subtitle_3}>{item.EMP_NAME}</Text>
+                                    <Text style={globalStyles.subtitle_4}>{item.DESIGNATION}</Text>
                                 </View>
                             </TouchableOpacity>
                         )}
@@ -73,7 +77,6 @@ const styles = StyleSheet.create({
     },
     container: {
         flexDirection: 'row',
-        backgroundColor: '#dddddb',
         borderRadius: 15,
         padding: 10,
         marginBottom: 10,

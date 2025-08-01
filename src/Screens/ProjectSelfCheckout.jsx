@@ -15,10 +15,14 @@ import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
+import { useTheme } from '../Context/ThemeContext';
 
 const ProjectSelfCheckout = () => {
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [isPopupVisible, setPopupVisible] = useState(false);
     const navigation = useNavigation();
     const [btnloading, setbtnLoading] = useState(false);
@@ -129,7 +133,7 @@ const ProjectSelfCheckout = () => {
             alert('Missing required data. Please ensure photo is captured.');
             return;
         }
-        if (!projectNo || !projectName) {
+        if (!projectNo) {
             alert('Now Select Project Details to Continue.');
             return;
         }
@@ -177,43 +181,46 @@ const ProjectSelfCheckout = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
-            <Header title="Project Self Check-In" />
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
+            <Header title="Project Self Check-out" />
             <View style={{ flex: 1 }}>
-                <View style={GlobalStyles.locationContainer}>
+                <View style={globalStyles.locationContainer}>
                     <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                    <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                    <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
                 </View>
 
-                <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
-                    <View style={GlobalStyles.container1}>
+                <View style={[globalStyles.twoInputContainer, { marginTop: 10 }]}>
+                    <View style={globalStyles.container1}>
                         <TextInput
                             mode="outlined"
                             label="Entry Date"
                             value={entryDate}
+                            theme={theme}
                             editable={false}
                             onPressIn={() => setShowDatePicker(true)}
                         />
                     </View>
 
-                    <View style={GlobalStyles.container2}>
+                    <View style={globalStyles.container2}>
                         <TextInput
                             mode="outlined"
                             label="Entry Time"
                             value={entryTime}
+                            theme={theme}
                             editable={false}
                             onPressIn={() => setShowTimePicker(true)}
                         />
                     </View>
                 </View>
 
-                <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
+                <Text style={[globalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
                 <View>
                     <TextInput
                         mode="outlined"
                         label="Project No"
                         onPressIn={() => setPopupVisible(true)}
                         value={projectNo}
+                        theme={theme}
                         style={{ width: '70%', marginTop: 5 }}
                         placeholder="Enter Project No"
                         showSoftInputOnFocus={false} />
@@ -229,20 +236,47 @@ const ProjectSelfCheckout = () => {
                         mode="outlined"
                         label="Project Name"
                         value={projectName}
+                        theme={theme}
                         showSoftInputOnFocus={false}
                         placeholder="Enter Project Name" />
                 </View>
 
-                <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginVertical: 10 }]} >
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={() => setShowCameraModal(true)} >Retake</Button>
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
+                <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginVertical: 10 }]} >
+                    <Button
+                        icon={"reload"}
+                        mode="contained"
+                        title="Reload Page"
+                        onPress={() => setShowCameraModal(true)}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
+                    >
+                        Retake
+                    </Button>
+                    <Button
+                        icon={"reload"}
+                        mode="contained"
+                        title="Reload Page"
+                        onPress={reload}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
+                    >
+                        Retry
+                    </Button>
                 </View>
 
                 <View style={styles.imageContainer}>
-                    <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                    <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                     <Image
                         source={{ uri: capturedImage }}
-                        style={GlobalStyles.empImageDisplay}
+                        style={globalStyles.empImageDisplay}
                     />
                 </View>
 
@@ -263,9 +297,15 @@ const ProjectSelfCheckout = () => {
                 />
             </View>
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveSelfCheckin}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     disabled={btnloading}
                     loading={btnloading}>
                     Save

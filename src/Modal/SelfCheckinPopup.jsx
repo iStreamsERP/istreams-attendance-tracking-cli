@@ -1,12 +1,13 @@
-import { Modal, StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native'
+import { Modal, StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GlobalStyles } from '../Styles/styles';
-import React, { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { callSoapService } from '../SoapRequestAPI/callSoapService';
-import { useAuth } from '../Context/AuthContext';
+import React from 'react';
+import { useTheme } from '../Context/ThemeContext';
 
 const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     return (
         <Modal
             visible={visible}
@@ -19,11 +20,11 @@ const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
                 activeOpacity={1}
                 onPress={onClose}
             >
-                <View style={styles.bottomModal}>
+                <View style={[styles.bottomModal, { backgroundColor: colors.card }]}>
                     <TouchableOpacity style={styles.modalOption}
                         onPress={() => { onSelectOption('office'); onClose(); }}>
-                        <Icon name="office-building" size={24} color="#002D72" />
-                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Office Check-in</Text>
+                        <Icon name="office-building" size={24} color={colors.primary} />
+                        <Text style={[globalStyles.subtitle_1, { marginLeft: 15 }]}>Office Check-in</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -32,8 +33,8 @@ const SelfCheckinPopup = ({ visible, onClose, onSelectOption }) => {
                             onSelectOption('project');
                             onClose();
                         }}                    >
-                        <Icon name="file-document" size={24} color="#002D72" />
-                        <Text style={[GlobalStyles.subtitle_1, { marginLeft: 15 }]}>Project Check-in</Text>
+                        <Icon name="file-document" size={24} color={colors.primary} />
+                        <Text style={[globalStyles.subtitle_1, { marginLeft: 15 }]}>Project Check-in</Text>
                     </TouchableOpacity>
                 </View>
             </TouchableOpacity>
@@ -50,7 +51,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     bottomModal: {
-        backgroundColor: 'white',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,

@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Alert, ScrollView } from 'react-native';
 import { Button } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
-import Header from '../Components/Header';
 import { useNavigation } from '@react-navigation/native';
 import CheckinComponent from '../Components/CheckinComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { useTheme } from '../Context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TeamCheckout = ({ selectedLocation }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    //const { selectedLocation } = route.params || {};
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
     const [projectNo, setProjectNo] = useState('');
@@ -20,6 +23,7 @@ const TeamCheckout = ({ selectedLocation }) => {
     const [capturedImage, setCapturedImage] = useState(null);
     const [coordinates, setCoordinates] = useState('');
     const [locationName, setLocationName] = useState('Fetching location...');
+    const [useNativeCamera, setUseNativeCamera] = useState(false);
 
     useEffect(() => {
         const requestLocationPermission = async () => {
@@ -48,18 +52,29 @@ const TeamCheckout = ({ selectedLocation }) => {
         requestLocationPermission();
     }, []);
 
+    // === Load camera preference here ===
+    useEffect(() => {
+        const loadCameraPreference = async () => {
+            const value = await AsyncStorage.getItem('USE_MANUAL_CAPTURE');
+            if (value !== null) {
+                setUseNativeCamera(JSON.parse(value));
+            }
+        };
+        loadCameraPreference();
+    }, []);
+
     const handleProjectSelect = (project) => {
         setProjectNo(project.PROJECT_NO);
         setProjectName(project.PROJECT_NAME);
     };
 
     const handlenavToEmpPage = () => {
-        if (!projectNo || !projectName) {
-            alert('Project Not Selected.');
+        if (!projectNo) {
+            Alert.alert('Project Not Selected.');
             return;
         }
         else if (!capturedImage) {
-            alert('Employee Image Not captured.')
+            Alert.alert('Employee Image Not captured.')
         }
         else {
             navigation.navigate('TeamCheckoutEmployees', {
@@ -69,34 +84,35 @@ const TeamCheckout = ({ selectedLocation }) => {
         }
     };
     return (
-        <ScrollView style={[GlobalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
 
             <CheckinComponent
-                entryDate={entryDate}
-                setEntryDate={setEntryDate}
-                entryTime={entryTime}
-                setEntryTime={setEntryTime}
-                projectNo={projectNo}
-                projectName={projectName}
-                capturedImage={capturedImage}
-                setCapturedImage={setCapturedImage}
-                cameraVisible={cameraVisible}
-                setCameraVisible={setCameraVisible}
-                coordinates={coordinates}
-                setCoordinates={setCoordinates}
-                locationName={locationName}
-                setLocationName={setLocationName}
+                entryDate={entryDate} setEntryDate={setEntryDate}
+                entryTime={entryTime} setEntryTime={setEntryTime}
+                projectNo={projectNo} setProjectNo={setProjectNo}
+                projectName={projectName} setProjectName={setProjectName}
+                capturedImage={capturedImage} setCapturedImage={setCapturedImage}
+                cameraVisible={cameraVisible} setCameraVisible={setCameraVisible}
+                useNativeCamera={useNativeCamera} setUseNativeCamera={setUseNativeCamera}
+                coordinates={coordinates} setCoordinates={setCoordinates}
+                locationName={locationName} setLocationName={setLocationName}
                 onProjectSelect={handleProjectSelect}
-                selectedLocation = {selectedLocation}
-                setProjectNo={setProjectNo}
-                setProjectName={setProjectName} />
+                selectedLocation={selectedLocation}
+            />
 
-            <View style={GlobalStyles.bottomButtonContainer}>
-                <Button mode="contained" onPress={handlenavToEmpPage}>
+            <View style={globalStyles.bottomButtonContainer}>
+                <Button mode="contained"
+                    onPress={handlenavToEmpPage}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: 'gray', // <- set your desired disabled color
+                        },
+                    }}>
                     Next
                 </Button>
             </View>
-        </ScrollView>
+        </View>
     );
 };
 

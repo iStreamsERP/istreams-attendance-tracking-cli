@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AllEmpReportScreen from '../Components/AllEmpReportScreen';
 import SelectEmpReportScreen from '../Components/SelectEmpReportScreen';
@@ -6,9 +6,13 @@ import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/SimpleLineIcons';
+import { useTheme } from '../Context/ThemeContext';
 
 const SwitchReportScreen = () => {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [selectedSection, setSelectedSection] = useState(null); // Changed to null for card view
 
     const handleCardPress = (section) => {
@@ -20,7 +24,7 @@ const SwitchReportScreen = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             {selectedSection === null && <Header title="Reports" />}
 
             {/* Show cards when no section is selected */}
@@ -32,7 +36,7 @@ const SwitchReportScreen = () => {
                         onPress={() => handleCardPress('section1')}
                     >
                         <View style={styles.cardHeader}>
-                            <Text style={[GlobalStyles.subtitle_1, styles.cardTitle]}>
+                            <Text style={[globalStyles.subtitle_1, styles.cardTitle]}>
                                 All Attendance Reports
                             </Text>
                         </View>
@@ -50,7 +54,7 @@ const SwitchReportScreen = () => {
                         onPress={() => handleCardPress('section2')}
                     >
                         <View style={styles.cardHeader}>
-                            <Text style={[GlobalStyles.subtitle_1, styles.cardTitle]}>
+                            <Text style={[globalStyles.subtitle_1, styles.cardTitle]}>
                                 Individual  Report
                             </Text>
                         </View>
@@ -100,7 +104,7 @@ export default SwitchReportScreen;
 const styles = StyleSheet.create({
     cardsContainer: {
         flex: 1,
-        padding: 20,
+        padding: 10,
         gap: 15,
     },
     card: {
@@ -131,18 +135,5 @@ const styles = StyleSheet.create({
     },
     sectionContainer: {
         flex: 1,
-    },
-    backButton: {
-        backgroundColor: '#6200ea',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
-        margin: 15,
-    },
-    backButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '500',
     },
 });

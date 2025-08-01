@@ -15,7 +15,7 @@ export const handleEmpImageUpload = async (avatar, empNo, setbtnLoading, userEma
 
     try {
         const response = await axios.post(
-            `http://23.105.135.231:8082/api/EncodeImgToNpy/upload`,
+            `http://103.168.19.35:8070/api/EncodeImgToNpy/upload`,
             formData,
             {
                 headers: {
@@ -26,7 +26,7 @@ export const handleEmpImageUpload = async (avatar, empNo, setbtnLoading, userEma
 
         if (response.data.message === 'Already exists') {
             const updateresponse = await axios.put(
-                `http://23.105.135.231:8082/api/EncodeImgToNpy/update`,
+                `http://103.168.19.35:8070/api/EncodeImgToNpy/update`,
                 formData,
                 {
                     headers: {
@@ -69,7 +69,7 @@ export const handleEmpImageView = async (
 
     try {
         const response = await axios.get(
-            `http://23.105.135.231:8082/api/EncodeImgToNpy/view`,
+            `http://103.168.19.35:8070/api/EncodeImgToNpy/view`,
             {
                 params: {
                     DomainName: domainPart,

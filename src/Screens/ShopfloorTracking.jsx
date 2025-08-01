@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Text, StyleSheet, View } from 'react-native';
+import { Text, StyleSheet, View, ScrollView } from 'react-native';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
@@ -9,10 +9,14 @@ import { LocationService } from '../Logics/LocationService';
 import { formatDate, formatTime } from '../Utils/dataTimeUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../Context/ThemeContext';
 
 const ShopfloorTracking = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [locationName, setLocationName] = useState('Fetching location...');
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
@@ -111,119 +115,135 @@ const ShopfloorTracking = () => {
         }
         else {
             navigation.navigate('ShopfloorEmp', {
-                deskArea,cuttingLineNo,sectionName,projectNo,
+                deskArea, cuttingLineNo, sectionName, projectNo,
                 locationName, entryDate, boqNo
             });
         }
     };
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Shopfloor Tracking" />
 
-            <View>
-                <View style={GlobalStyles.locationContainer}>
-                    <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                    <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+            <ScrollView>
+                <View>
+                    <View style={globalStyles.locationContainer}>
+                        <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
+                        <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                    </View>
                 </View>
-            </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
-                <View style={GlobalStyles.container1}>
+                <View style={[globalStyles.twoInputContainer, { marginTop: 10 }]}>
+                    <View style={globalStyles.container1}>
+                        <TextInput
+                            mode="outlined"
+                            label="Desk Area No"
+                            value={deskArea}
+                            theme={theme}
+                            onChangeText={setDeskArea}
+                            returnKeyType="done"
+                            onSubmitEditing={handleGetSectionName}
+                        />
+                    </View>
+
+                    <View style={globalStyles.container2}>
+                        <TextInput
+                            mode="outlined"
+                            label="Section Name"
+                            value={sectionName}
+                            theme={theme}
+                            onChangeText={setSectionName}
+                            editable={false}
+                        />
+                    </View>
+                </View>
+
+                <View style={[globalStyles.twoInputContainer, { marginTop: 10 }]}>
+                    <View style={globalStyles.container1}>
+                        <TextInput
+                            mode="outlined"
+                            label="CuttingLine No"
+                            value={cuttingLineNo}
+                            theme={theme}
+                            onChangeText={setCuttingLineNo}
+                            returnKeyType="done"
+                            onSubmitEditing={handleGetProjectBOQ}
+                        />
+                    </View>
+                    <View style={globalStyles.container2}>
+                        <TextInput
+                            mode="outlined"
+                            label="Entry Date"
+                            value={entryDate}
+                            theme={theme}
+                            editable={false}
+                        />
+                    </View>
+                </View>
+
+                <View style={{ marginTop: 10 }}>
+                    <Text style={globalStyles.subtitle_1}>Project Details</Text>
                     <TextInput
                         mode="outlined"
-                        label="Desk Area No"
-                        value={deskArea}
-                        onChangeText={setDeskArea}
-                        returnKeyType="done"
-                        onSubmitEditing={handleGetSectionName}
+                        label="Project No"
+                        value={projectNo}
+                        theme={theme}
+                        style={{ marginVertical: 5 }}
+                        editable={false}
                     />
-                </View>
-
-                <View style={GlobalStyles.container2}>
                     <TextInput
                         mode="outlined"
-                        label="Section Name"
-                        value={sectionName}
-                        onChangeText={setSectionName}
+                        label="Project Name"
+                        value={projectName}
+                        multiline
+                        theme={theme}
+                        numberOfLines={2}
                         editable={false}
                     />
                 </View>
-            </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
-                <View style={GlobalStyles.container1}>
+                <View style={{ flex: 1, marginTop: 10 }}>
+                    <Text style={globalStyles.subtitle_1}>BOQ Details</Text>
                     <TextInput
                         mode="outlined"
-                        label="CuttingLine No"
-                        value={cuttingLineNo}
-                        onChangeText={setCuttingLineNo}
-                        returnKeyType="done"
-                        onSubmitEditing={handleGetProjectBOQ}
-                    />
-                </View>
-                <View style={GlobalStyles.container2}>
-                    <TextInput
-                        mode="outlined"
-                        label="Entry Date"
-                        value={entryDate}
+                        label="BOQ No"
+                        value={boqNo}
+                        theme={theme}
+                        style={{ marginVertical: 5 }}
                         editable={false}
                     />
+                    <TextInput
+                        mode="outlined"
+                        label="BOQ Desc"
+                        value={boqName}
+                        editable={false}
+                        theme={theme}
+                        multiline
+                        numberOfLines={3}
+                    />
+
+                    <Snackbar
+                        visible={snackbarVisible}
+                        onDismiss={() => setSnackbarVisible(false)}
+                        duration={3000}
+                        action={{
+                            label: 'OK',
+                            onPress: () => setSnackbarVisible(false),
+                        }}
+                    >
+                        {snackbarMsg}
+                    </Snackbar>
                 </View>
-            </View>
+            </ScrollView>
 
-            <View style={{ marginTop: 10 }}>
-                <Text style={GlobalStyles.subtitle_1}>Project Details</Text>
-                <TextInput
-                    mode="outlined"
-                    label="Project No"
-                    value={projectNo}
-                    style={{ marginVertical: 5 }}
-                    editable={false}
-                />
-                <TextInput
-                    mode="outlined"
-                    label="Project Name"
-                    value={projectName}
-                    multiline
-                    numberOfLines={2}
-                    editable={false}
-                />
-            </View>
-
-            <View style={{ flex: 1, marginTop: 10 }}>
-                <Text style={GlobalStyles.subtitle_1}>BOQ Details</Text>
-                <TextInput
-                    mode="outlined"
-                    label="BOQ No"
-                    value={boqNo}
-                    style={{ marginVertical: 5 }}
-                    editable={false}
-                />
-                <TextInput
-                    mode="outlined"
-                    label="BOQ Desc"
-                    value={boqName}
-                    editable={false}
-                    multiline
-                    numberOfLines={3}
-                />
-
-                <Snackbar
-                    visible={snackbarVisible}
-                    onDismiss={() => setSnackbarVisible(false)}
-                    duration={3000}
-                    action={{
-                        label: 'OK',
-                        onPress: () => setSnackbarVisible(false),
-                    }}
-                >
-                    {snackbarMsg}
-                </Snackbar>
-            </View>
-
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={handleNavigation}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     loading={btnloading}
                     disabled={btnloading}>
                     Next

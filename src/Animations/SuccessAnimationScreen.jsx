@@ -2,14 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, Animated } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTheme } from '../Context/ThemeContext';
+import { GlobalStyles } from '../Styles/styles';
 
 export default function SuccessAnimationScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const globalStyles = GlobalStyles(colors);
 
   const { message, details, returnTo = 'BottomNavigation', selectedLocation } = route.params || {};
-
-  console.log(selectedLocation);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -39,7 +42,7 @@ export default function SuccessAnimationScreen() {
 
   return (
     <View style={styles.overlay}>
-      <Animated.View style={[styles.modal, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.modal, { opacity: fadeAnim, backgroundColor: colors.card }]}>
         <LottieView
           source={require('../../assets/animations/success_animation.json')}
           autoPlay
@@ -47,8 +50,8 @@ export default function SuccessAnimationScreen() {
           style={styles.animation}
         />
 
-        <Text style={styles.message}>{message}</Text>
-        <Text style={styles.name}>{details}</Text>
+        <Text style={[globalStyles.subtitle, { color: colors.success }]}>{message}</Text>
+        <Text style={[globalStyles.content, globalStyles.mt_5]}>{details}</Text>
       </Animated.View>
     </View>
   );
@@ -62,7 +65,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 25,
     width: '80%',
@@ -72,18 +74,5 @@ const styles = StyleSheet.create({
   animation: {
     width: 150,
     height: 150,
-  },
-  message: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'green',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  name: {
-    fontSize: 14,
-    marginTop: 15,
-    textAlign: 'center',
-    color: '#333',
   },
 });

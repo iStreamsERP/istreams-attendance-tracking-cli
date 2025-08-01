@@ -9,11 +9,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
 import { useAuth } from '../Context/AuthContext';
 import { requestNotificationPermission, displayLocalNotification } from '../Utils/notificationUtils';
+import { useTheme } from '../Context/ThemeContext';
+import { colors } from '../Styles/colors';
 
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
     const { login, userData } = useAuth();
+    const { darkMode, theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const insets = useSafeAreaInsets();
     const [usernameInput, setUsernameInput] = useState('');
     const [passwordInput, setPasswordInput] = useState('');
@@ -57,6 +62,13 @@ const LoginScreen = ({ navigation }) => {
                 const response = await loginBLL(username, password, login);
 
                 if (response === "Authetication passed") {
+                    const value = await AsyncStorage.getItem('USE_MANUAL_CAPTURE');
+                    console.log('USE_MANUAL_CAPTURE', value);
+                    
+                    if (value === null) {
+                        await AsyncStorage.setItem('USE_MANUAL_CAPTURE', JSON.stringify(true));
+                    }
+
                     if (rememberMe) {
                         await AsyncStorage.setItem('username', username);
                         await AsyncStorage.setItem('password', password);
@@ -80,7 +92,7 @@ const LoginScreen = ({ navigation }) => {
                         navigation.dispatch(
                             CommonActions.reset({
                                 index: 0,
-                                routes: [{ name: 'Home' }],
+                                routes: [{ name: 'Home1' }],
                             })
                         );
                     }
@@ -108,9 +120,9 @@ const LoginScreen = ({ navigation }) => {
             style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
         >
             <Video
-                source={require('../../assets/video/video_bg_1.mp4')}
+                source={require('../../assets/video/login_bg.mp4')}
                 style={StyleSheet.absoluteFill}
-                resizeMode="cover"
+                resizeMode='none'
                 repeat={true}
                 muted={false}
                 paused={false}
@@ -124,28 +136,30 @@ const LoginScreen = ({ navigation }) => {
                         />
                     </View>
 
-                    <View style={styles.formContainer}>
-                        <Text style={[GlobalStyles.title, { marginVertical: 10, textAlign: "center" }]}>Login</Text>
+                    <View style={[styles.formContainer, { backgroundColor: colors.loginBackground, }]}>
+                        <Text style={[globalStyles.title, { marginVertical: 10, textAlign: "center", color: colors.text }]}>Login</Text>
 
                         <TextInput
                             mode="outlined"
                             label="Username"
                             value={usernameInput}
+                            theme={theme}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             onChangeText={setUsernameInput}
                             placeholder="Enter username"
-                            style={[GlobalStyles.input, { marginBottom: 10 }]}
+                            style={[globalStyles.input, { marginBottom: 10 }]}
                         />
 
                         <TextInput
                             mode="outlined"
                             label="Password"
                             value={passwordInput}
+                            theme={theme}
                             onChangeText={setPasswordInput}
                             autoCapitalize="none"
                             placeholder="Enter your password"
-                            style={GlobalStyles.input}
+                            style={globalStyles.input}
                             secureTextEntry={!passwordVisible}
                             right={
                                 <TextInput.Icon
@@ -160,12 +174,13 @@ const LoginScreen = ({ navigation }) => {
                             <View style={styles.checkBoxSection}>
                                 <Checkbox
                                     status={rememberMe ? "checked" : "unchecked"}
+                                    color={colors.primary}
                                     onPress={() => setRememberMe(!rememberMe)}
                                 />
-                                <Text style={GlobalStyles.subtitle_2}>Remember me</Text>
+                                <Text style={[globalStyles.subtitle_2, { color: colors.text }]}>Remember me</Text>
                             </View>
                             <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword1")}>
-                                <Text style={GlobalStyles.subtitle_3}>Forgot Password</Text>
+                                <Text style={[globalStyles.subtitle_3, { color: colors.text }]}>Forgot Password</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -173,8 +188,7 @@ const LoginScreen = ({ navigation }) => {
                             mode="contained"
                             loading={loading}
                             onPress={handleSoapCall}
-                            //onPress={displayLocalNotification}
-                            theme={{ colors: { primary: "#3b82f6" }, disabled: '#3b82f6' }}
+                            style={{ backgroundColor: colors.primary }}
                             disabled={loading}
                         >
                             Login
@@ -182,12 +196,12 @@ const LoginScreen = ({ navigation }) => {
 
                         {/* Sign Up Text */}
                         <View style={styles.signUpTextContainer}>
-                            <Text style={GlobalStyles.content}>
+                            <Text style={[globalStyles.content, { color: colors.text }]}>
                                 Don't have an account?
                             </Text>
                             <TouchableOpacity onPress={
                                 () => navigation.navigate("SignUpScreen")}>
-                                <Text style={[GlobalStyles.subtitle, { color: "#3b82f6", marginLeft: 5 }]}>Sign Up</Text>
+                                <Text style={[globalStyles.subtitle, { color: colors.primary }]}>Sign Up</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -210,7 +224,6 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     formContainer: {
-        backgroundColor: "rgba(255, 255, 255, 0.85)",
         padding: 20,
         borderTopLeftRadius: 40,
         borderTopRightRadius: 40,
@@ -236,6 +249,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
+        gap: 5,
     },
 });
 

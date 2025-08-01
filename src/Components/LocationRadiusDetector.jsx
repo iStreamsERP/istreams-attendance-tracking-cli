@@ -9,9 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from './Header';
 import { TextInput, Button, Snackbar } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTheme } from '../Context/ThemeContext';
+import { colors } from '../Styles/colors';
 
 const LocationRadiusDetector = ({
-    checkinRadius = 10,
     onLocationCheck,
     onLocationUpdate,
     onAccessGranted,
@@ -25,6 +26,9 @@ const LocationRadiusDetector = ({
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const route = useRoute();
+    const { darkMode, theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     const { returnTo } = route.params || {};
 
@@ -35,6 +39,7 @@ const LocationRadiusDetector = ({
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [locationName, setLocationName] = useState('');
     const [coordinates, setCoordinates] = useState('');
+    const [checkinRadius, setCheckinRadius] = useState(null);
     const [address, setAddress] = useState('');
     const [locationCheckComplete, setLocationCheckComplete] = useState(false);
     const [locationCheckResult, setLocationCheckResult] = useState(null);
@@ -43,7 +48,7 @@ const LocationRadiusDetector = ({
 
     // State for project selection
     const [siteLocations, setSiteLocations] = useState([]);
-    const [showprojLocPopup, setShowprojLocPopup] = useState(false);
+    const [showprojLocPopup, setShowprojLocPopup] = useState(true);
     const [searchText, setSearchText] = useState('');
     const [filteredLocations, setFilteredLocations] = useState([]);
 
@@ -105,28 +110,27 @@ const LocationRadiusDetector = ({
 
     // Handle location selection
     const handleItemSelect = (item) => {
-        setSelectedLocation(item);
-        setSearchText(`${item.PROJECT_NO} - ${item.PROJECT_NAME} (${item.SITE_LOCATION})`);
-        setShowprojLocPopup(false);
-        setLocationCheckComplete(false);
-        setLocationCheckResult(null);
-
-        // Save selected location to AsyncStorage
+        const projectName = item.PROJECT_NAME ?? ""; // <-- if null or undefined, use empty string
         const locationData = {
             coordinates: item.GPS_LOCATION || `${item.GPS_LATITUDE},${item.GPS_LONGITUDE}`,
-            name: `${item.PROJECT_NO} - ${item.PROJECT_NAME}`,
+            name: `${item.PROJECT_NO} - ${projectName}`,
             siteLocation: item.SITE_LOCATION,
             description: item.DETAIL_DESCRIPTION,
             GPS_LATITUDE: item.GPS_LATITUDE,
-            GPS_LONGITUDE: item.GPS_LONGITUDE
+            GPS_LONGITUDE: item.GPS_LONGITUDE,
+            checkinRadius: parseFloat(item.CHECK_IN_RADIOUS || 0)
         };
+
+        setSelectedLocation(locationData);
+        setCheckinRadius(locationData.checkinRadius);
+        setShowprojLocPopup(false);
+        setSearchText(`${item.PROJECT_NO} - ${projectName} (${item.SITE_LOCATION})`);
+        setLocationCheckComplete(false);
+        setLocationCheckResult(null);
 
         AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationData));
 
-        // Automatically start location check after a brief delay
-        setTimeout(() => {
-            checkLocationDistance(locationData);
-        }, 2000);
+        setTimeout(() => checkLocationDistance(locationData), 500);
     };
 
     // Main location checking function
@@ -138,116 +142,129 @@ const LocationRadiusDetector = ({
         try {
             const targetLoc = targetLocation || selectedLocation;
             if (!targetLoc) {
+                if (showAlerts) Alert.alert('Error', 'Please select a project location first.');
+                return false;
+            }
+
+            const hasCoordinates = (() => {
+                const lat = (targetLoc.GPS_LATITUDE || "").trim().toLowerCase();
+                const lon = (targetLoc.GPS_LONGITUDE || "").trim().toLowerCase();
+                const coordStr = (targetLoc.coordinates || "").trim().toLowerCase();
+
+                // Check individual fields
+                const validLatLon = lat && lon && lat !== "null" && lon !== "null";
+                // Check combined string
+                const validCoordStr = coordStr && coordStr !== "null,null" && coordStr.includes(",");
+
+                return validLatLon || validCoordStr;
+            })();
+
+            // ---- Restrict entry if no coordinates ----
+            if (!hasCoordinates) {
+                const resultData = {
+                    distance: null,
+                    canAccess: false,
+                    locationName: '',
+                    coordinates: '',
+                    address: '',
+                    selectedProject: targetLoc,
+                    status: 'failed'
+                };
+
+                setDistance(null);
+                setCanAccess(false);
+                setLocationCheckResult(resultData);
+                setLocationCheckComplete(true);
+                onAccessDenied?.(resultData);
+
                 if (showAlerts) {
-                    Alert.alert('Error', 'Please select a project location first.');
+                    Alert.alert('Error', 'This location does not have valid coordinates. Contact admin.');
                 }
                 return false;
             }
 
-            const locationData = await new Promise((resolve, reject) => {
-                let locationInfo = {
-                    name: '',
-                    coordinates: '',
-                    address: ''
+            // ---- Skip geofencing only when radius = 0 AND coordinates exist ----
+            const isExactZero =
+                (targetLoc.checkinRadius === 0 || targetLoc.checkinRadius === "0");
+
+            if (isExactZero) {
+                const resultData = {
+                    distance: 0,
+                    canAccess: true,
+                    locationName: '',
+                    coordinates: targetLoc.coordinates || `${targetLoc.GPS_LATITUDE},${targetLoc.GPS_LONGITUDE}`,
+                    address: '',
+                    selectedProject: targetLoc,
+                    status: 'success'
                 };
 
+                setDistance(0);
+                setCanAccess(true);
+                setLocationCheckResult(resultData);
+                setLocationCheckComplete(true);
+                onLocationCheck?.(resultData);
+                onLocationUpdate?.({});
+                onAccessGranted?.(resultData);
+                return true;
+            }
+
+            // ---- Normal geofencing logic (unchanged) ----
+            const locationData = await new Promise((resolve, reject) => {
+                let locationInfo = { name: '', coordinates: '', address: '' };
                 try {
                     LocationService(
-                        (name) => {
-                            locationInfo.name = name;
-                            setLocationName(name);
-                        },
-                        (coords) => {
-                            locationInfo.coordinates = coords;
-                            setCoordinates(coords);
-                            resolve(locationInfo); // Resolve only when coordinates are available
-                        },
-                        (addr) => {
-                            locationInfo.address = addr;
-                            setAddress(addr);
-                        }
+                        (name) => { locationInfo.name = name; setLocationName(name); },
+                        (coords) => { locationInfo.coordinates = coords; setCoordinates(coords); resolve(locationInfo); },
+                        (addr) => { locationInfo.address = addr; setAddress(addr); }
                     );
-
-                    // Fallback timeout (15 seconds)
-                    setTimeout(() => {
-                        if (!locationInfo.coordinates) {
-                            reject(new Error('Timeout: No coordinates received'));
-                        }
-                    }, 15000);
-
-                } catch (error) {
-                    reject(error);
-                }
+                    setTimeout(() => reject(new Error('Timeout: No coordinates received')), 15000);
+                } catch (error) { reject(error); }
             });
 
             const currentCoords = parseCoordinates(locationData.coordinates);
             const officeCoords = targetLoc.GPS_LATITUDE && targetLoc.GPS_LONGITUDE
-                ? {
-                    latitude: parseFloat(targetLoc.GPS_LATITUDE),
-                    longitude: parseFloat(targetLoc.GPS_LONGITUDE)
-                }
+                ? { latitude: parseFloat(targetLoc.GPS_LATITUDE), longitude: parseFloat(targetLoc.GPS_LONGITUDE) }
                 : parseCoordinates(targetLoc.coordinates || targetLoc.GPS_LOCATION);
 
-            if (
-                currentCoords.latitude && currentCoords.longitude &&
-                officeCoords.latitude && officeCoords.longitude
-            ) {
-                const distanceFromOffice = calculateDistance(
-                    currentCoords.latitude, currentCoords.longitude,
-                    officeCoords.latitude, officeCoords.longitude
-                );
-                const roundedDistance = Math.round(distanceFromOffice);
-                const isWithinRange = roundedDistance <= checkinRadius;
+            const distanceFromOffice = calculateDistance(
+                currentCoords.latitude, currentCoords.longitude,
+                officeCoords.latitude, officeCoords.longitude
+            );
+            const roundedDistance = Math.round(distanceFromOffice);
+            const isWithinRange = roundedDistance <= parseFloat(targetLoc.checkinRadius || 0);
 
-                setDistance(roundedDistance);
-                setCanAccess(isWithinRange);
-
-                const resultData = {
-                    distance: roundedDistance,
-                    canAccess: isWithinRange,
-                    locationName: locationData.name,
-                    coordinates: locationData.coordinates,
-                    address: locationData.address,
-                    selectedProject: targetLoc,
-                    status: isWithinRange ? 'success' : 'failed'
-                };
-
-                setLocationCheckResult(resultData);
-                setLocationCheckComplete(true);
-
-                onLocationCheck?.(resultData);
-                onLocationUpdate?.(locationData);
-                if (isWithinRange) {
-                    onAccessGranted?.(resultData);
-                }
-                else {
-                    onAccessDenied?.(resultData);
-
-                    if (showAlerts) {
-                        setSnackbarMsg('Take a Few Steps Away from the Location and try...');
-                        setSnackbarVisible(true);
-                    }
-                }
-
-                return isWithinRange;
-            } else {
+            setDistance(roundedDistance);
+            setCanAccess(isWithinRange);
+            const resultData = {
+                distance: roundedDistance,
+                canAccess: isWithinRange,
+                locationName: locationData.name,
+                coordinates: locationData.coordinates,
+                address: locationData.address,
+                selectedProject: targetLoc,
+                status: isWithinRange ? 'success' : 'failed'
+            };
+            setLocationCheckResult(resultData);
+            setLocationCheckComplete(true);
+            onLocationCheck?.(resultData);
+            onLocationUpdate?.(locationData);
+            if (isWithinRange) onAccessGranted?.(resultData);
+            else {
+                onAccessDenied?.(resultData);
                 if (showAlerts) {
-                    Alert.alert('Error', 'Invalid coordinates. Please check the selected location data.');
+                    setSnackbarMsg('Take a Few Steps Away from the Location and try...');
+                    setSnackbarVisible(true);
                 }
-                return false;
             }
-
+            return isWithinRange;
         } catch (err) {
             console.error('Location error:', err);
-            if (showAlerts) {
-                Alert.alert('Error', err.message || 'Failed to get current location.');
-            }
+            if (showAlerts) Alert.alert('Error', err.message || 'Failed to get current location.');
             return false;
         } finally {
             setLocationLoading(false);
         }
-    }, [checkinRadius, selectedLocation, showAlerts, autoRetry]);
-
+    }, [selectedLocation, checkinRadius, showAlerts, autoRetry]);
 
     const retryLocationCheck = useCallback(() => checkLocationDistance(), [checkLocationDistance]);
 
@@ -256,10 +273,14 @@ const LocationRadiusDetector = ({
         console.log(locationCheckResult);
 
         if (locationCheckResult && locationCheckResult.canAccess) {
-            navigation.navigate('SuccessAnimationScreen', {
-                message: 'Location Verified',
-                details: `You are within ${locationCheckResult.distance}m of the project location. You can now capture your attendance.`,
-                returnTo: returnTo || 'Home',
+            // navigation.navigate('SuccessAnimationScreen', {
+            //     message: 'Location Verified',
+            //     details: `You are within ${locationCheckResult.distance}m of the project location. You can now capture your attendance.`,
+            //     returnTo: returnTo || 'Home',
+            //     selectedLocation: locationCheckResult.selectedProject
+            // });
+
+            navigation.navigate(returnTo, {
                 selectedLocation: locationCheckResult.selectedProject
             });
         }
@@ -281,25 +302,36 @@ const LocationRadiusDetector = ({
     // Show loading screen during location check
     if (locationLoading) {
         return (
-            <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+            <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
                 <Header title="Location Radius Detector" />
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={GlobalStyles.subtitle_1}>Checking your location...</Text>
+                    <Text style={globalStyles.subtitle_1}>Checking your location...</Text>
                     {selectedLocation && (
-                        <Text style={[GlobalStyles.subtitle, GlobalStyles.mt_10, { color: '#007AFF' }]}>
-                            Selected Project: {selectedLocation.PROJECT_NO} - {selectedLocation.SITE_LOCATION}
+                        <Text style={[globalStyles.subtitle, globalStyles.mt_10, { color: '#007AFF' }]}>
+                            Selected Project: {selectedLocation.name} - {selectedLocation.siteLocation}
                         </Text>
                     )}
                     {distance !== null && (
-                        <Text style={[GlobalStyles.content1, GlobalStyles.mt_10]}>
+                        <Text style={[globalStyles.content1, globalStyles.mt_10]}>
                             Current distance: {distance}m (Required: within {checkinRadius}m)
+                        </Text>
+                    )}
+                    {checkinRadius === 0 && (
+                        <Text style={[globalStyles.content1, globalStyles.mt_10]}>
+                            No geofencing applied for this location.
                         </Text>
                     )}
                     <Button
                         mode="contained"
                         onPress={retryLocationCheck}
-                        style={GlobalStyles.mt_10}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
+                        style={globalStyles.mt_10}
                     >
                         Retry Location Check
                     </Button>
@@ -310,7 +342,7 @@ const LocationRadiusDetector = ({
 
     // Main UI for project selection
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <Header title="Location Radius Detector" />
 
             <TextInput
@@ -318,6 +350,7 @@ const LocationRadiusDetector = ({
                 label="Search Project / Location"
                 placeholder="Search Project / Location ..."
                 style={{ marginVertical: 10 }}
+                theme={theme}
                 value={searchText}
                 onChangeText={setSearchText}
                 onPressIn={() => setShowprojLocPopup(true)}
@@ -331,7 +364,7 @@ const LocationRadiusDetector = ({
             />
 
             {showprojLocPopup && (
-                <View style={styles.dropdown}>
+                <View style={[styles.dropdown, { backgroundColor: colors.card }]}>
                     <FlatList
                         data={filteredLocations}
                         keyExtractor={(item, index) =>
@@ -341,12 +374,14 @@ const LocationRadiusDetector = ({
                                 onPress={() => handleItemSelect(item)}
                                 style={styles.dropdownItem}
                             >
-                                <Text style={[GlobalStyles.subtitle_2, { color: '#0685de' }]}>
-                                    {`${item.PROJECT_NO} - ${item.PROJECT_NAME}`}
+                                <Text style={[globalStyles.subtitle_2, { color: colors.primary }]}>
+                                    {item.PROJECT_NAME
+                                        ? `${item.PROJECT_NO} - ${item.PROJECT_NAME}`
+                                        : item.PROJECT_NO}
                                 </Text>
-                                <View style={GlobalStyles.twoInputContainer}>
-                                    <Text style={GlobalStyles.subtitle_2}>{item.SITE_LOCATION}</Text>
-                                    <Text style={GlobalStyles.subtitle_2}>{item.DETAIL_DESCRIPTION}</Text>
+                                <View style={globalStyles.twoInputContainer}>
+                                    <Text style={globalStyles.subtitle_2}>{item.SITE_LOCATION}</Text>
+                                    <Text style={globalStyles.subtitle_2}>{item.DETAIL_DESCRIPTION}</Text>
                                 </View>
                             </TouchableOpacity>
                         )}
@@ -356,10 +391,16 @@ const LocationRadiusDetector = ({
 
             {selectedLocation && !showprojLocPopup &&
                 (
-                    <View style={GlobalStyles.camButtonContainer}>
+                    <View style={globalStyles.camButtonContainer}>
                         <Button
                             icon={"reload"}
                             mode="contained"
+                            theme={{
+                                colors: {
+                                    primary: colors.primary,
+                                    disabled: colors.lightGray, // <- set your desired disabled color
+                                },
+                            }}
                             onPress={() => checkLocationDistance()}
                         >
                             Recheck
@@ -367,36 +408,44 @@ const LocationRadiusDetector = ({
                     </View>
                 )}
 
-            <View style={GlobalStyles.flex_1}>
+            <View style={globalStyles.flex_1}>
                 {/* Location Check Results Display */}
                 {locationCheckComplete && locationCheckResult && (
                     <View style={[
                         styles.resultContainer,
                         locationCheckResult.canAccess ? styles.successContainer : styles.failureContainer
                     ]}>
-                        <Text style={[GlobalStyles.title1, GlobalStyles.txt_center]}>
+                        <Text style={[globalStyles.title1, globalStyles.txt_center, { color: darkMode ? colors.background : colors.text }]}>
                             {locationCheckResult.canAccess ? '✅ Location Verified' : '❌ Access Denied'}
                         </Text>
 
-                        <View style={GlobalStyles.mb_10}>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10, GlobalStyles.mt_10]}>
-                                Site: {selectedLocation.SITE_LOCATION}
+                        <View style={globalStyles.mb_10}>
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, globalStyles.mt_10, { color: darkMode ? colors.background : colors.text }]}>
+                                Site: {selectedLocation.siteLocation}
                             </Text>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10]}>
-                                Project: {selectedLocation.PROJECT_NO} - {selectedLocation.PROJECT_NAME}
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, { color: darkMode ? colors.background : colors.text }]}>
+                                Project: {selectedLocation.name}
                             </Text>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10]}>
-                                Required radius: Within {checkinRadius}m
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, { color: darkMode ? colors.background : colors.text }]}>
+                                {checkinRadius === 0
+                                    ? 'No geofencing applied for this location'
+                                    : `Required radius: Within ${checkinRadius}m`
+                                }
                             </Text>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10]}>
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, { color: darkMode ? colors.background : colors.text }]}>
                                 Current Location: {locationName}
                             </Text>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10]}>
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, { color: darkMode ? colors.background : colors.text }]}>
                                 Coordinates: {locationCheckResult.coordinates}
                             </Text>
-                            <Text style={[GlobalStyles.subtitle_2, GlobalStyles.mb_10]}>
+                            
+                            <Text style={[globalStyles.subtitle_2, globalStyles.mb_10, { color: darkMode ? colors.background : colors.text }]}>
                                 Radius:
-                                {locationCheckResult.distance > checkinRadius ? (
+                                {checkinRadius === 0 ? (
+                                    <Text style={{ color: darkMode ? colors.background : colors.text }}>
+                                        You're having access to Attendance without Geofencing
+                                    </Text>
+                                ) : locationCheckResult.distance > checkinRadius ? (
                                     <Text style={{ color: '#d42525' }}>
                                         ✕ You're now {locationCheckResult.distance}m Away. Move Closer and Try Again
                                     </Text>
@@ -430,12 +479,12 @@ const LocationRadiusDetector = ({
                     <Button
                         mode="contained"
                         onPress={handleProceed}
-                        style={[GlobalStyles.bottomButtonContainer, { backgroundColor: '#4caf50' }]}
+                        style={[globalStyles.bottomButtonContainer, { backgroundColor: '#4caf50' }]}
                     >
                         Proceed to Attendance
                     </Button>
                 ) : (
-                    <View style={[styles.actionButtons, GlobalStyles.bottomButtonContainer, { columnGap: 10 }]}>
+                    <View style={[styles.actionButtons, globalStyles.bottomButtonContainer, { columnGap: 10 }]}>
                         <Button
                             mode="contained"
                             onPress={() => checkLocationDistance()}
@@ -447,7 +496,8 @@ const LocationRadiusDetector = ({
                         <Button
                             mode="outlined"
                             onPress={changeLocation}
-                            style={GlobalStyles.flex_1}
+                            theme={{ colors: { primary: '#007AFF' } }}
+                            style={globalStyles.flex_1}
                             icon={"map-marker"}
                         >
                             Change Location
@@ -484,11 +534,10 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     dropdown: {
-        maxHeight: 220,
+        maxHeight: 430,
+        borderColor: colors.gray,
         borderWidth: 1,
-        borderColor: '#ddd',
         borderRadius: 5,
-        backgroundColor: '#fff',
     },
     dropdownItem: {
         paddingHorizontal: 10,

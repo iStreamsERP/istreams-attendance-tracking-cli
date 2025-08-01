@@ -9,12 +9,16 @@ import { GlobalStyles } from '../Styles/styles';
 import EmployeeListCard from '../Components/EmployeeListCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 
 const DPREmp = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [btnloading, setbtnLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const { startTime, endTime, projectNo, activity, compQty,
@@ -68,26 +72,27 @@ const DPREmp = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Add DPR Employees" />
 
-            <View style={[styles.projectContainer, GlobalStyles.twoInputContainer]}>
-                <View style={[GlobalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
-                    <Text style={[GlobalStyles.subtitle_2]}>Project No:</Text>
-                    <Text style={[GlobalStyles.subtitle_2, { color: '#873e23' }]}> {projectNo}</Text>
+            <View style={globalStyles.projectContainer}>
+                <View style={[globalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
+                    <Text style={[globalStyles.subtitle_2]}>Project No:</Text>
+                    <Text style={[globalStyles.subtitle_2, { color: '#873e23' }]}> {projectNo}</Text>
                 </View>
 
-                <View style={[GlobalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
-                    <Text style={[GlobalStyles.subtitle_2]}>BOQ No:</Text>
-                    <Text style={[GlobalStyles.subtitle_2, { color: '#873e23' }]}> {boqNo}</Text>
+                <View style={[globalStyles.twoInputContainer, { justifyContent: 'flex-start' }]}>
+                    <Text style={[globalStyles.subtitle_2]}>BOQ No:</Text>
+                    <Text style={[globalStyles.subtitle_2, { color: '#873e23' }]}> {boqNo}</Text>
                 </View>
             </View>
 
 
-            <View style={GlobalStyles.camButtonContainer}>
+            <View style={globalStyles.camButtonContainer}>
                 <Button
                     icon="plus"
                     mode="contained-tonal"
+                    theme={theme}
                     onPress={() =>
                         navigation.navigate('EmployeeList', {
                             onSelect: async (employees) => {
@@ -100,7 +105,7 @@ const DPREmp = () => {
                 </Button>
             </View>
 
-            <View style={{flex: 1, marginVertical: 10}}>
+            <View style={{ flex: 1, marginVertical: 10 }}>
                 <EmployeeListCard
                     loading={loading}
                     selectedEmp={selectedEmp}
@@ -111,6 +116,12 @@ const DPREmp = () => {
                 <Button mode="contained"
                     onPress={SaveShopfloor}
                     disabled={btnloading}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     loading={btnloading}>
                     Save
                 </Button>
@@ -121,12 +132,6 @@ const DPREmp = () => {
 
 
 const styles = StyleSheet.create({
-    projectContainer: {
-        backgroundColor: '#d7dff7',
-        borderRadius: 15,
-        padding: 10,
-        marginVertical: 10,
-    },
 });
 
 export default DPREmp;

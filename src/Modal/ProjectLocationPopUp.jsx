@@ -5,9 +5,13 @@ import { useAuth } from '../Context/AuthContext';
 import { useState, useEffect } from 'react';
 import { IconButton, Searchbar } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
+import { useTheme } from '../Context/ThemeContext';
 
 const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [siteLocations, setSiteLocations] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -30,8 +34,10 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
     };
 
     useEffect(() => {
-        getData();
-    }, []);
+        if (visible) {
+            getData();
+        }
+    }, [visible]);
 
     const filteredProjectsLocations = siteLocations.filter(pro => {
         const proName = pro.PROJECT_NAME || '';
@@ -47,7 +53,7 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
         );
     });
 
-    const handleDelete = async (item) =>  {
+    const handleDelete = async (item) => {
         Alert.alert(
             'Delete Location',
             'Are you sure you want to delete this location?',
@@ -86,11 +92,12 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
             animationType="slide"
             onRequestClose={onClose}
         >
-            <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-            <View style={styles.popup}>
+            <TouchableOpacity style={globalStyles.backdrop} onPress={onClose} />
+            <View style={[globalStyles.popup, { backgroundColor: colors.background }]}>
                 {/* Search Input */}
                 <Searchbar
-                    style={styles.inputContainer}
+                    style={globalStyles.my_10}
+                    theme={theme}
                     placeholder="Search Projects"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -100,17 +107,17 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
                     keyExtractor={(item) =>
                         item.PROJECT_NO + item.SITE_LOCATION}
                     renderItem={({ item }) => (
-                        <View style={styles.itemRow}>
+                        <View style={[styles.itemRow, { backgroundColor: colors.card }]}>
                             <TouchableOpacity
                                 style={styles.itemContent}
                                 onPress={() => onSelect(item)}
                             >
                                 <View style={styles.titleRow}>
-                                    <Text style={[GlobalStyles.subtitle_3, { color: '#0685de' }]}>
+                                    <Text style={[globalStyles.subtitle_3, { color: '#0685de' }]}>
                                         {item.PROJECT_NO}
                                     </Text>
                                     <Text
-                                        style={[GlobalStyles.subtitle_3, { color: '#0685de' }]}
+                                        style={[globalStyles.subtitle_3, { color: '#0685de' }]}
                                         numberOfLines={2}
                                     >
                                         {' - '}{item.PROJECT_NAME}
@@ -118,10 +125,10 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
                                 </View>
 
                                 <View style={styles.detailsRow}>
-                                    <Text style={[GlobalStyles.subtitle_2, { flexShrink: 1 }]}>
+                                    <Text style={[globalStyles.subtitle_2, { flexShrink: 1 }]}>
                                         {item.SITE_LOCATION}
                                     </Text>
-                                    <Text style={[GlobalStyles.subtitle_2, { flexShrink: 1 }]}>
+                                    <Text style={[globalStyles.subtitle_2, { flexShrink: 1 }]}>
                                         {item.DETAIL_DESCRIPTION}
                                     </Text>
                                 </View>
@@ -139,25 +146,6 @@ const ProjectLocationPopUp = ({ visible, onClose, onSelect }) => {
 };
 
 const styles = StyleSheet.create({
-    backdrop: {
-        flex: 1,
-        backgroundColor: '#00000066',
-    },
-    popup: {
-        position: 'absolute',
-        top: '33%',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#f8f8f8',
-        borderTopRightRadius: 30,
-        borderTopLeftRadius: 30,
-        padding: 10,
-        elevation: 10,
-    },
-    inputContainer: {
-        marginVertical: 10,
-    },
     delButton: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -166,11 +154,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderWidth: 1,
-        borderColor: '#eee',
         borderRadius: 15,
         marginBottom: 5,
-        backgroundColor: '#fff',
         paddingLeft: 10,
         paddingVertical: 12,
         width: '100%',

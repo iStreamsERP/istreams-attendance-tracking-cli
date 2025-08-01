@@ -4,10 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect } from 'react';
 import { Searchbar } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
+import { useTheme } from '../Context/ThemeContext';
 
 const ProjectListPopup = ({ visible, onClose, onSelect }) => {
     const [projects, setProjects] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     const getData = async () => {
         try {
@@ -47,11 +51,12 @@ const ProjectListPopup = ({ visible, onClose, onSelect }) => {
             animationType="slide"
             onRequestClose={onClose}
         >
-            <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-            <View style={styles.popup}>
+            <TouchableOpacity style={globalStyles.backdrop} onPress={onClose} />
+            <View style={[globalStyles.popup, { backgroundColor: colors.background }]}>
                 {/* Search Input */}
                 <Searchbar
-                    style={styles.inputContainer}
+                    style={globalStyles.my_10}
+                    theme={theme}
                     placeholder="Search Projects"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -61,11 +66,11 @@ const ProjectListPopup = ({ visible, onClose, onSelect }) => {
                     keyExtractor={(item) => item.PROJECT_NO}
                     renderItem={({ item }) => (
                         <TouchableOpacity
-                            style={styles.item}
+                            style={[globalStyles.item, { backgroundColor: colors.card }]}
                             onPress={() => onSelect(item)}
                         >
-                            <Text style={[GlobalStyles.subtitle_3, {color: '#0685de'}]}>{item.PROJECT_NO}</Text>
-                            <Text style={GlobalStyles.subtitle_2}>{item.PROJECT_NAME}</Text>
+                            <Text style={[globalStyles.subtitle_3, {color: '#0685de'}]}>{item.PROJECT_NO}</Text>
+                            <Text style={globalStyles.subtitle_2}>{item.PROJECT_NAME}</Text>
                         </TouchableOpacity>
                     )}
                 />
@@ -73,36 +78,5 @@ const ProjectListPopup = ({ visible, onClose, onSelect }) => {
         </Modal>
     );
 };
-
-const styles = StyleSheet.create({
-    backdrop: {
-        flex: 1,
-        backgroundColor: '#00000066',
-    },
-    popup: {
-        position: 'absolute',
-        top: '33%',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#f8f8f8',
-        borderTopRightRadius: 30,
-        borderTopLeftRadius: 30,
-        padding: 10,
-        elevation: 10,
-    },
-    item: {
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderRadius: 15,
-        marginBottom: 5,
-        backgroundColor: '#fff',
-    },
-    inputContainer: {
-        marginVertical: 10,
-    },
-});
 
 export default ProjectListPopup;

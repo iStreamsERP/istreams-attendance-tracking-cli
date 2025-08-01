@@ -1,12 +1,15 @@
-// Updated CategoryListPopUp.js
 import React from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect } from 'react';
 import { Chip } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
+import { useTheme } from '../Context/ThemeContext';
 
 const CategoryListPopUp = ({ onSelect, selectedCategory, leaveType }) => {
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [category, setCategory] = useState([]);
     const [selectedValue, setSelectedValue] = useState(selectedCategory || '');
 
@@ -62,23 +65,23 @@ const CategoryListPopUp = ({ onSelect, selectedCategory, leaveType }) => {
                                 onPress={() => handleChipPress(item)}
                                 style={[
                                     selectedValue === item.LEAVE_CATEGORY
-                                        ? { backgroundColor: '#7c57ad' }
-                                        : { backgroundColor: 'white' }
+                                        ? { backgroundColor: colors.primary }
+                                        : { backgroundColor: colors.background }
                                 ]}
                                 textStyle={[
-                                    GlobalStyles.subtitle_3,
+                                    globalStyles.subtitle_3,
                                     selectedValue === item.LEAVE_CATEGORY
-                                        ? { color: 'white' }
-                                        : { color: '#7c57ad' }
+                                        ? { color: colors.text }
+                                        : { color: colors.text }
                                 ]}
-                                selectedColor='white'
+                                selectedColor={colors.text}
                             >
                                 {item.LEAVE_CATEGORY}
                             </Chip>
                         ))
                     ) : (
                         <View>
-                            <Text style={styles.noDataText}>
+                            <Text style={[globalStyles.small_text, { color: colors.text }]}>
                                 {leaveType ? 'No categories available for this leave type' : 'Please select a leave type first'}
                             </Text>
                         </View>
@@ -95,11 +98,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         paddingVertical: 10,
         gap: 8,
-    },
-    noDataText: {
-        fontSize: 13,
-        color: '#666',
-        textAlign: 'center',
     },
 });
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, Image, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Header from '../Components/Header';
 import { LocationService } from '../Logics/LocationService';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import { GlobalStyles } from '../Styles/styles';
@@ -12,11 +11,16 @@ import CustomDatePicker from '../Components/CustomDatePicker';
 import ManualImageCaptureModal from '../Modal/ManualImageCaptureModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../Context/ThemeContext';
+import { handlePickImageOptimized } from '../Utils/nativeCameraFunction';
 
 const TeamCheckout_Manual = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const route = useRoute();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const { selectedLocation } = route.params || {};
     const [locationName, setLocationName] = useState('Fetching Location...');
     const [coordinates, setCoordinates] = useState('');
@@ -29,6 +33,7 @@ const TeamCheckout_Manual = () => {
     const [chosenCheckinDate, setChosenCheckinDate] = useState('');
     const [address, setAddress] = useState('');
     const [capturedImage, setCapturedImage] = useState(null);
+    const [useNativeCamera, setUseNativeCamera] = useState(false);
     const [cameraVisible, setCameraVisible] = useState(false);
 
     useEffect(() => {
@@ -41,15 +46,12 @@ const TeamCheckout_Manual = () => {
                     const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
                     if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
                         await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
-                        console.log('Stored new location:', locationFromParams);
                     }
                 }
 
                 // Load final location from storage (which is either the newly saved one or the existing one)
                 const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
                 const location = finalStored ? JSON.parse(finalStored) : null;
-
-                console.log('Using location:', location);
 
                 const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
                 setProjectNo(projectNo);
@@ -63,6 +65,17 @@ const TeamCheckout_Manual = () => {
         loadOrUpdateLocation();
     }, []);
 
+    useEffect(() => {
+        const loadPreference = async () => {
+            const value = await AsyncStorage.getItem('USE_MANUAL_CAPTURE');
+            
+            if (value !== null) {
+                setUseNativeCamera(JSON.parse(value));
+            }
+        };
+        loadPreference();
+    }, []);
+
     const handleProjectSelect = (project) => {
         setProjectNo(project.PROJECT_NO);
         setProjectName(project.PROJECT_NAME);
@@ -70,13 +83,15 @@ const TeamCheckout_Manual = () => {
     };
 
     const handleDateSelected = (dateString) => {
-        console.log('Date selected:', dateString);
-        
         setChosenCheckinDate(dateString);
     };
 
-    const handleCapture = (uri) => {
-        setCapturedImage(uri);
+    const handleCapturePress = () => {
+        if (useNativeCamera) {
+            handlePickImageOptimized(setCapturedImage); // Default picker
+        } else {
+            setCameraVisible(true);  // Open custom camera modal
+        }
     };
 
     useEffect(() => {
@@ -90,7 +105,7 @@ const TeamCheckout_Manual = () => {
 
     const handlenavToEmpPage = () => {
 
-        if (!projectNo || !projectName) {
+        if (!projectNo) {
             alert('Project Not Selected.');
             return;
         }
@@ -101,7 +116,7 @@ const TeamCheckout_Manual = () => {
             alert('Employee Image Not captured.')
         }
         else {
-            navigation.navigate('TeamCheckoutEmployees', {
+            navigation.navigate('TeamCheckoutEmployees_Manual', {
                 projectNo, chosenCheckinDate,
                 entryDate, entryTime, coordinates, locationName, capturedImage
             });
@@ -109,86 +124,105 @@ const TeamCheckout_Manual = () => {
     };
 
     return (
-        <ScrollView style={[GlobalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
-            <View style={GlobalStyles.locationContainer}>
-                <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
-            </View>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top, paddingHorizontal: 0 }]}>
+            <ScrollView>
+                <View style={globalStyles.locationContainer}>
+                    <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
+                    <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 5 }]}>
-                <View style={GlobalStyles.container1}>
+                <View style={[globalStyles.twoInputContainer, { marginTop: 5 }]}>
+                    <View style={globalStyles.container1}>
+                        <TextInput
+                            mode="outlined"
+                            label="Entry Date"
+                            style={globalStyles.height_45}
+                            theme={theme}
+                            value={entryDate}
+                            editable={false}
+                        />
+                    </View>
+
+                    <View style={globalStyles.container2}>
+                        <TextInput
+                            mode="outlined"
+                            label="Entry Time"
+                            value={entryTime}
+                            theme={theme}
+                            editable={false}
+                            style={globalStyles.height_45}
+                            onPressIn={() => setShowTimePicker(true)}
+                        />
+                    </View>
+                </View>
+
+                <Text style={[globalStyles.subtitle, globalStyles.mt_5]}>Retrieve Check-in Details here</Text>
+                <View style={[globalStyles.twoInputContainer, { marginVertical: 5 }]}>
                     <TextInput
                         mode="outlined"
-                        label="Entry Date"
-                        style={GlobalStyles.height_45}
-                        value={entryDate}
-                        editable={false}
+                        label="Project No"
+                        // onPressIn={() => setPopupVisible(true)}
+                        value={projectNo}
+                        onChangeText={setProjectNo}
+                        style={globalStyles.container1}
+                        placeholder="Enter Project No"
+                        theme={theme}
+                        //showSoftInputOnFocus={false}
+                        editable={false} />
+                    <TextInput
+                        mode="outlined"
+                        label="Check-in Date"
+                        onPress={() => setVisible(true)}
+                        value={chosenCheckinDate}
+                        theme={theme}
+                        style={globalStyles.container2}
+                        showSoftInputOnFocus={false}
                     />
                 </View>
 
-                <View style={GlobalStyles.container2}>
-                    <TextInput
-                        mode="outlined"
-                        label="Entry Time"
-                        value={entryTime}
-                        editable={false}
-                        style={GlobalStyles.height_45}
-                        onPressIn={() => setShowTimePicker(true)}
+                <TextInput
+                    mode="outlined"
+                    label="Project Name"
+                    value={projectName}
+                    theme={theme}
+                    onChangeText={setProjectName}
+                    editable={false}
+                    style={globalStyles.height_45}
+                    placeholder="Enter Project Name" />
+
+                <View style={globalStyles.camButtonContainer}>
+                    <Button icon="camera" mode="contained-tonal"
+                        onPress={handleCapturePress}
+                    >
+                        Capture Image
+                    </Button>
+
+                    <ManualImageCaptureModal
+                        visible={cameraVisible}
+                        onClose={() => setCameraVisible(false)}
+                        onCapture={(uri) => {
+                            setCapturedImage(uri);
+                            setCameraVisible(false);
+                        }}
                     />
                 </View>
-            </View>
+                <View style={globalStyles.imageContainer}>
+                    <Image
+                        source={{ uri: capturedImage }}
+                        style={globalStyles.fullImage}
+                    />
+                </View>
+            </ScrollView>
 
-            <Text style={[GlobalStyles.subtitle, GlobalStyles.mt_5]}>Retrieve Check-in Details here</Text>
-            <View style={[GlobalStyles.twoInputContainer, { marginVertical: 5 }]}>
-                <TextInput
-                    mode="outlined"
-                    label="Project No"
-                    // onPressIn={() => setPopupVisible(true)}
-                    value={projectNo}
-                    onChangeText={setProjectNo}
-                    style={GlobalStyles.container1}
-                    placeholder="Enter Project No"
-                    //showSoftInputOnFocus={false}
-                    editable={false} />
-                <TextInput
-                    mode="outlined"
-                    label="Check-in Date"
-                    onPress={() => setVisible(true)}
-                    value={chosenCheckinDate}
-                    style={GlobalStyles.container2}
-                    showSoftInputOnFocus={false}
-                />
-            </View>
-
-            <TextInput
-                mode="outlined"
-                label="Project Name"
-                value={projectName}
-                onChangeText={setProjectName}
-                editable={false}
-                style={GlobalStyles.height_45}
-                placeholder="Enter Project Name" />
-
-            <View style={GlobalStyles.camButtonContainer}>
-                <Button icon="camera" mode="contained-tonal" onPress={() => setCameraVisible(true)}>
-                    Capture Image
-                </Button>
-
-                <ManualImageCaptureModal
-                    visible={cameraVisible}
-                    onClose={() => setCameraVisible(false)}
-                    onCapture={handleCapture}
-                />
-            </View>
-            <View style={GlobalStyles.imageContainer}>
-                <Image
-                    source={{ uri: capturedImage }}
-                    style={GlobalStyles.fullImage}
-                />
-            </View>
-
-            <View style={GlobalStyles.bottomButtonContainer}>
-                <Button mode="contained" onPress={handlenavToEmpPage}>
+            <View style={globalStyles.bottomButtonContainer}>
+                <Button mode="contained"
+                    onPress={handlenavToEmpPage}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: 'gray', // <- set your desired disabled color
+                        },
+                    }}>
                     Next
                 </Button>
             </View>
@@ -204,7 +238,7 @@ const TeamCheckout_Manual = () => {
                 onClose={() => setVisible(false)}
                 onDateSelected={handleDateSelected}
             />
-        </ScrollView>
+        </View>
     )
 };
 

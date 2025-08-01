@@ -26,7 +26,28 @@ import { useFaceDetector } from "react-native-vision-camera-face-detector";
 import { compressImage } from "../Utils/UriToBase64Utils";
 import RNFS from 'react-native-fs';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+// Device type and orientation detection
+const getScreenDimensions = () => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+};
+
+const isTablet = () => {
+    const { width, height } = getScreenDimensions();
+    const aspectRatio = width / height;
+    const minDimension = Math.min(width, height);
+    const maxDimension = Math.max(width, height);
+    
+    // Tablets typically have:
+    // - Larger minimum dimension (usually > 600dp)
+    // - Different aspect ratios (closer to 4:3 or 3:2)
+    return minDimension > 600 || (aspectRatio > 0.6 && aspectRatio < 0.8) || maxDimension > 900;
+};
+
+const getOrientation = () => {
+    const { width, height } = getScreenDimensions();
+    return width > height ? 'landscape' : 'portrait';
+};
 
 // Create FaceDetectionCamera component
 const FaceDetectionCamera = React.forwardRef(({
@@ -85,25 +106,93 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
     const [faces, setFaces] = useState([]);
     const [autoCaptureEnabled, setAutoCaptureEnabled] = useState(true);
     const [capturedImage, setCapturedImage] = useState(null);
-    //const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [faceInTargetBox, setFaceInTargetBox] = useState(false);
     const [debugInfo, setDebugInfo] = useState('Initializing...');
-    const [isCapturing, setIsCapturing] = useState(false); // Add capture state
+    const [isCapturing, setIsCapturing] = useState(false);
+
+    // Orientation state
+    const [screenDimensions, setScreenDimensions] = useState(getScreenDimensions());
+    const [orientation, setOrientation] = useState(getOrientation());
 
     const [currentChallenge, setCurrentChallenge] = useState(null);
     const [challengeCompleted, setChallengeCompleted] = useState(false);
-    const [stableDetectionCount, setStableDetectionCount] = useState(0); // Add stable detection counter
+    const [stableDetectionCount, setStableDetectionCount] = useState(0);
 
     const cameraRef = useRef(null);
     const lastFrameTime = useRef(0);
     const countdownInterval = useRef(null);
     const eyeClosedTime = useRef(null);
     const blinkDetected = useRef(false);
-    const autoCaptureTimeout = useRef(null); // Add timeout ref
+    const autoCaptureTimeout = useRef(null);
     const shakeHistory = useRef([]);
     const shakeStartTime = useRef(null);
     const headShakeDetected = useRef(false);
+
+    // Device and orientation info
+    const deviceType = useMemo(() => isTablet() ? 'tablet' : 'phone', []);
+    const isLandscape = orientation === 'landscape';
+    
+    // Handle orientation changes
+    useEffect(() => {
+        const subscription = Dimensions.addEventListener('change', ({ window }) => {
+            setScreenDimensions({ width: window.width, height: window.height });
+            setOrientation(window.width > window.height ? 'landscape' : 'portrait');
+        });
+
+        return () => subscription?.remove();
+    }, []);
+
+    // Dynamic sizing based on device type and orientation
+    const targetBoxDimensions = useMemo(() => {
+        const { width: screenWidth, height: screenHeight } = screenDimensions;
+        
+        if (deviceType === 'tablet') {
+            if (isLandscape) {
+                // Landscape tablet - adjust for wider screen
+                const boxWidth = Math.min(screenWidth * 0.25, 300);
+                const boxHeight = Math.min(screenHeight * 0.6, 400);
+                return {
+                    width: boxWidth,
+                    height: boxHeight,
+                    left: (screenWidth - boxWidth) / 2,
+                    top: (screenHeight - boxHeight) / 2
+                };
+            } else {
+                // Portrait tablet
+                const boxWidth = Math.min(screenWidth * 0.4, 350);
+                const boxHeight = Math.min(screenHeight * 0.5, 420);
+                return {
+                    width: boxWidth,
+                    height: boxHeight,
+                    left: (screenWidth - boxWidth) / 2,
+                    top: (screenHeight - boxHeight) / 2
+                };
+            }
+        } else {
+            if (isLandscape) {
+                // Landscape phone - smaller box to accommodate wider layout
+                const boxWidth = 200;
+                const boxHeight = 250;
+                return {
+                    width: boxWidth,
+                    height: boxHeight,
+                    left: (screenWidth - boxWidth) / 2,
+                    top: (screenHeight - boxHeight) / 2
+                };
+            } else {
+                // Portrait phone - original dimensions
+                const boxWidth = 250;
+                const boxHeight = 300;
+                return {
+                    width: boxWidth,
+                    height: boxHeight,
+                    left: (screenWidth - boxWidth) / 2,
+                    top: (screenHeight - boxHeight) / 2
+                };
+            }
+        }
+    }, [deviceType, isLandscape, screenDimensions]);
 
     useEffect(() => {
         return () => {
@@ -140,43 +229,12 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                     icon: '😊',
                     description: 'Smile widely for the camera'
                 },
-                // {
-                //     id: 'headshake',
-                //     name: 'Shake your head 🙂‍↔️',
-                //     icon: '🙂‍↔️',
-                //     description: 'Turn your head left and right'
-                // },
             ]
         },
         {
             id: 'double',
             name: 'double',
             actions: [
-                // {
-                //     id: 'blink+headshake',
-                //     name: 'Blink then shake head 👁️➡️🙂‍↔️',
-                //     icon: '👁️🙂‍↔️',
-                //     description: 'First blink, then shake your head'
-                // },
-                // {
-                //     id: 'headshake+blink',
-                //     name: 'Shake head then blink 🙂‍↔️➡️👁️',
-                //     icon: '🙂‍↔️👁️',
-                //     description: 'First shake head, then blink'
-                // },
-                // {
-                //     id: 'smile+headshake',
-                //     name: 'Smile then shake head 😊➡️🙂‍↔️',
-                //     icon: '😊🙂‍↔️',
-                //     description: 'First smile, then shake your head'
-                // },
-                // {
-                //     id: 'headshake+smile',
-                //     name: 'Shake head then smile 🙂‍↔️➡️😊',
-                //     icon: '🙂‍↔️😊',
-                //     description: 'First shake head, then smile'
-                // },
-
                 {
                     id: 'blink',
                     name: 'Blink then shake head 👁️➡️🙂‍↔️',
@@ -212,10 +270,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
 
     // Select random challenge
     const selectRandomChallenge = useCallback(() => {
-        // Randomly choose challenge type (single or double)
         const challengeType = challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
-
-        // Get a random challenge from the selected type
         const randomChallenge = challengeType.actions[
             Math.floor(Math.random() * challengeType.actions.length)
         ];
@@ -229,7 +284,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
 
         setChallengeCompleted(false);
         setStableDetectionCount(0);
-        // Reset detection states
         blinkDetected.current = false;
         eyeClosedTime.current = null;
         shakeHistory.current = [];
@@ -253,7 +307,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
     }, [capturedImage]);
 
-    // Detect blink function
+    // Enhanced blink detection for tablets and orientation
     const detectBlink = useCallback((face) => {
         if (!face) return false;
  
@@ -265,13 +319,23 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
  
         const now = Date.now();
-        const closed = left < 0.5 && right < 0.5;
-        const opened = left > 0.8 && right > 0.8;
+        // Adjusted thresholds for tablets and orientation
+        const closedThreshold = deviceType === 'tablet' ? 0.4 : 0.5;
+        const openThreshold = deviceType === 'tablet' ? 0.7 : 0.8;
+        
+        const closed = left < closedThreshold && right < closedThreshold;
+        const opened = left > openThreshold && right > openThreshold;
  
-        console.log('Blink check:', { left: left.toFixed(2), right: right.toFixed(2), closed, opened });
+        console.log(`[${deviceType}-${orientation}] Blink check:`, { 
+            left: left.toFixed(2), 
+            right: right.toFixed(2), 
+            closed, 
+            opened,
+            thresholds: { closed: closedThreshold, open: openThreshold }
+        });
  
         // If blink already detected and still valid, return true
-        if (blinkDetected.current && now - blinkDetected.current < 3000) { // Extended from 2000 to 3000
+        if (blinkDetected.current && now - blinkDetected.current < 3000) {
             return true;
         }
  
@@ -286,8 +350,11 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             const blinkDuration = now - eyeClosedTime.current;
             console.log('⏱️ Blink duration:', blinkDuration);
  
-            // FIXED: More lenient duration (100ms to 2000ms)
-            if (blinkDuration >= 100 && blinkDuration <= 2000) {
+            // More lenient duration for tablets
+            const minDuration = deviceType === 'tablet' ? 80 : 100;
+            const maxDuration = deviceType === 'tablet' ? 2500 : 2000;
+            
+            if (blinkDuration >= minDuration && blinkDuration <= maxDuration) {
                 blinkDetected.current = now;
                 eyeClosedTime.current = null;
                 console.log('✅ Valid blink detected!');
@@ -298,16 +365,16 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             }
         }
  
-        // Reset if eyes have been open too long (increased timeout)
-        if (opened && eyeClosedTime.current && (now - eyeClosedTime.current > 2500)) {
+        // Reset if eyes have been open too long
+        if (opened && eyeClosedTime.current && (now - eyeClosedTime.current > 3000)) {
             eyeClosedTime.current = null;
             console.log('🔄 Reset - eyes open too long');
         }
  
         return false;
-    }, []);
+    }, [deviceType, orientation]);
 
-    // Detect headshake using yaw angle
+    // Enhanced headshake detection for tablets and orientation
     const detectHeadShake = useCallback((face) => {
         if (headShakeDetected.current) return true;
 
@@ -318,26 +385,30 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
 
         // Add yaw with timestamp to history
         shakeHistory.current.push({ time: now, yaw });
-        shakeHistory.current = shakeHistory.current.filter(p => now - p.time < 1500); // Keep only last 1.5s
+        shakeHistory.current = shakeHistory.current.filter(p => now - p.time < 2000); // Increased window for tablets
 
-        if (shakeHistory.current.length < 6) return false;
+        if (shakeHistory.current.length < 4) return false; // Reduced minimum points
 
-        // Convert to directions: left (< -10), right (> 10)
+        // Adjusted thresholds for tablets and orientation
+        const leftThreshold = deviceType === 'tablet' ? -8 : -10;
+        const rightThreshold = deviceType === 'tablet' ? 8 : 10;
+
         const directions = shakeHistory.current.map(p =>
-            p.yaw < -10 ? 'left' :
-                p.yaw > 10 ? 'right' : 'center'
+            p.yaw < leftThreshold ? 'left' :
+                p.yaw > rightThreshold ? 'right' : 'center'
         );
 
-        // Filter out 'center' and count changes
         const filtered = directions.filter(d => d !== 'center');
         let changes = 0;
         for (let i = 1; i < filtered.length; i++) {
             if (filtered[i] !== filtered[i - 1]) changes++;
         }
 
-        console.log("Yaw:", yaw.toFixed(2), "Dirs:", filtered.join(','), "Changes:", changes);
+        console.log(`[${deviceType}-${orientation}] Headshake - Yaw:`, yaw.toFixed(2), "Dirs:", filtered.join(','), "Changes:", changes);
 
-        if (changes >= 3) {
+        // Reduced change requirement for tablets
+        const requiredChanges = deviceType === 'tablet' ? 2 : 3;
+        if (changes >= requiredChanges) {
             headShakeDetected.current = true;
             console.log('✅ Head shake detected!');
 
@@ -350,7 +421,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
 
         return false;
-    }, []);
+    }, [deviceType, orientation]);
 
     // Detect liveness actions
     const detectLivenessAction = useCallback((face) => {
@@ -362,7 +433,9 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 case 'blink':
                     return detectBlink(face);
                 case 'smile':
-                    return (face.smilingProbability ?? 0) > 0.7;
+                    // Adjusted smile threshold for tablets
+                    const smileThreshold = deviceType === 'tablet' ? 0.6 : 0.7;
+                    return (face.smilingProbability ?? 0) > smileThreshold;
                 case 'headshake':
                     return detectHeadShake(face);
                 case 'none':
@@ -373,11 +446,9 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
 
         // For double validation challenges
         else if (currentChallenge.type === 'double') {
-            // Check which actions are completed
             const completedActions = [...currentChallenge.completedActions];
             let allCompleted = false;
 
-            // Check next action in sequence
             const nextAction = currentChallenge.sequence[completedActions.length];
 
             if (nextAction === 'blink' && detectBlink(face)) {
@@ -385,7 +456,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                     completedActions.push('blink');
                 }
             }
-            else if (nextAction === 'smile' && (face.smilingProbability ?? 0) > 0.7) {
+            else if (nextAction === 'smile' && (face.smilingProbability ?? 0) > (deviceType === 'tablet' ? 0.6 : 0.7)) {
                 if (!completedActions.includes('smile')) {
                     completedActions.push('smile');
                 }
@@ -396,26 +467,22 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 }
             }
 
-            // Update challenge with completed actions
             setCurrentChallenge(prev => ({
                 ...prev,
                 completedActions
             }));
 
-            // Check if all actions in sequence are completed
             allCompleted = completedActions.length === currentChallenge.sequence.length;
-
             return allCompleted;
         }
 
         return false;
-    }, [currentChallenge, detectBlink, detectHeadShake]);
+    }, [currentChallenge, detectBlink, detectHeadShake, deviceType]);
 
     const handleModalClose = useCallback(() => {
         setIsActive(false);
         onClose();
 
-        // Clean up timeouts and intervals
         if (autoCaptureTimeout.current) {
             clearTimeout(autoCaptureTimeout.current);
             autoCaptureTimeout.current = null;
@@ -425,7 +492,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             countdownInterval.current = null;
         }
 
-        // Reset all states
         setCapturedImage(null);
         setFaces([]);
         setFaceInTargetBox(false);
@@ -440,107 +506,96 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         setDebugInfo('Initializing...');
     }, [onClose]);
 
-    // Handle successful capture - navigate back with image
     const handleCaptureSuccess = useCallback((imagePath) => {
         console.log('Capture success:', imagePath);
 
-        // Call the onCapture callback if provided
         if (onCapture) {
             onCapture(imagePath);
         }
 
-        // Close the modal
         handleModalClose();
     }, [onCapture, handleModalClose]);
 
     const { hasPermission, requestPermission } = useCameraPermission();
     const devices = useCameraDevices();
 
-    // Target box dimensions and position
-    const targetBoxWidth = 250;
-    const targetBoxHeight = 300;
-    const targetBoxLeft = (screenWidth - targetBoxWidth) / 2;
-    const targetBoxTop = (screenHeight - targetBoxHeight) / 2;
-    const targetBoxRight = targetBoxLeft + targetBoxWidth;
-    const targetBoxBottom = targetBoxTop + targetBoxHeight;
-
-    // Check if face is within target box
+    // Enhanced face position detection for tablets and orientation
     const isFaceInTargetBox = useCallback((face) => {
         if (!face || !face.bounds) return false;
 
         const { bounds } = face;
+        const { width: boxWidth, height: boxHeight, left: boxLeft, top: boxTop } = targetBoxDimensions;
 
-        // Get the face center point
         const faceCenterX = bounds.x + bounds.width / 2;
         const faceCenterY = bounds.y + bounds.height / 2;
 
-        // Get target box center
-        const targetCenterX = targetBoxLeft + targetBoxWidth / 2;
-        const targetCenterY = targetBoxTop + targetBoxHeight / 2;
+        const targetCenterX = boxLeft + boxWidth / 2;
+        const targetCenterY = boxTop + boxHeight / 2;
 
-        // Check if face center is within target box with some tolerance
-        const horizontalTolerance = targetBoxWidth * 0.3; // 30% tolerance on each side
-        const verticalTolerance = targetBoxHeight * 0.3; // 30% tolerance on top/bottom
+        // Adjusted tolerances for tablets and orientation
+        const horizontalTolerance = boxWidth * (deviceType === 'tablet' ? 0.4 : 0.3);
+        const verticalTolerance = boxHeight * (deviceType === 'tablet' ? 0.4 : 0.3);
 
-        const isInHorizontalRange = Math.abs(faceCenterX - targetCenterX) <= (targetBoxWidth / 2 + horizontalTolerance);
-        const isInVerticalRange = Math.abs(faceCenterY - targetCenterY) <= (targetBoxHeight / 2 + verticalTolerance);
+        const isInHorizontalRange = Math.abs(faceCenterX - targetCenterX) <= (boxWidth / 2 + horizontalTolerance);
+        const isInVerticalRange = Math.abs(faceCenterY - targetCenterY) <= (boxHeight / 2 + verticalTolerance);
 
-        // Check if face has reasonable overlap with target box
         const faceLeft = bounds.x;
         const faceRight = bounds.x + bounds.width;
         const faceTop = bounds.y;
         const faceBottom = bounds.y + bounds.height;
 
-        // Calculate overlap area
-        const overlapLeft = Math.max(faceLeft, targetBoxLeft);
-        const overlapRight = Math.min(faceRight, targetBoxRight);
-        const overlapTop = Math.max(faceTop, targetBoxTop);
-        const overlapBottom = Math.min(faceBottom, targetBoxBottom);
+        const overlapLeft = Math.max(faceLeft, boxLeft);
+        const overlapRight = Math.min(faceRight, boxLeft + boxWidth);
+        const overlapTop = Math.max(faceTop, boxTop);
+        const overlapBottom = Math.min(faceBottom, boxTop + boxHeight);
 
-        // Check if there's any overlap
         const hasOverlap = overlapLeft < overlapRight && overlapTop < overlapBottom;
-
         if (!hasOverlap) return false;
 
-        // Calculate overlap percentage
         const overlapWidth = overlapRight - overlapLeft;
         const overlapHeight = overlapBottom - overlapTop;
         const overlapArea = overlapWidth * overlapHeight;
         const faceArea = bounds.width * bounds.height;
         const overlapPercentage = overlapArea / faceArea;
 
-        // Face should have at least 40% overlap with target box
-        const minOverlapPercentage = 0.4;
+        // Adjusted overlap requirements for tablets and orientation
+        const minOverlapPercentage = deviceType === 'tablet' ? 0.3 : 0.4;
         const hasMinimumOverlap = overlapPercentage >= minOverlapPercentage;
 
-        // Check if face is large enough (minimum size requirements)
-        const minFaceWidth = targetBoxWidth * 0.3; // Face should be at least 30% of box width
-        const minFaceHeight = targetBoxHeight * 0.3; // Face should be at least 30% of box height
+        // Adjusted size requirements for tablets and orientation
+        const minFaceWidth = boxWidth * (deviceType === 'tablet' ? 0.25 : 0.3);
+        const minFaceHeight = boxHeight * (deviceType === 'tablet' ? 0.25 : 0.3);
         const isLargeEnough = bounds.width >= minFaceWidth && bounds.height >= minFaceHeight;
 
-        // Check if face is not too large (to avoid very close faces)
-        const maxFaceWidth = targetBoxWidth * 1.5; // Face shouldn't be more than 150% of box width
-        const maxFaceHeight = targetBoxHeight * 1.5; // Face shouldn't be more than 150% of box height
+        const maxFaceWidth = boxWidth * (deviceType === 'tablet' ? 1.8 : 1.5);
+        const maxFaceHeight = boxHeight * (deviceType === 'tablet' ? 1.8 : 1.5);
         const isNotTooLarge = bounds.width <= maxFaceWidth && bounds.height <= maxFaceHeight;
 
-        return isInHorizontalRange && isInVerticalRange && hasMinimumOverlap && isLargeEnough && isNotTooLarge;
-    }, [targetBoxLeft, targetBoxTop, targetBoxRight, targetBoxBottom, targetBoxWidth, targetBoxHeight]);
+        const result = isInHorizontalRange && isInVerticalRange && hasMinimumOverlap && isLargeEnough && isNotTooLarge;
+        
+        if (result) {
+            console.log(`[${deviceType}-${orientation}] Face in target box:`, {
+                faceSize: `${bounds.width.toFixed(0)}x${bounds.height.toFixed(0)}`,
+                overlapPercent: (overlapPercentage * 100).toFixed(1) + '%',
+                position: `${faceCenterX.toFixed(0)},${faceCenterY.toFixed(0)}`
+            });
+        }
 
-    // Handle photo capture
+        return result;
+    }, [targetBoxDimensions, deviceType, orientation]);
+
+    // Handle photo capture with orientation-aware rotation
     const handleCapture = useCallback(async () => {
-        // Prevent multiple captures
         if (isCapturing) {
             console.log('Capture already in progress, skipping...');
             return false;
         }
 
-        // Check camera readiness
         if (!cameraRef.current) {
             Alert.alert("Error", "Camera not ready");
             return false;
         }
 
-        // Check face conditions
         const facesNearBox = faces.filter(face => isFaceInTargetBox(face));
         if (facesNearBox.length !== 1) {
             if (faces.length === 0) {
@@ -564,9 +619,8 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         }
 
         try {
-            setIsCapturing(true); // Set capturing state immediately
+            setIsCapturing(true);
 
-            // Clear any pending timeouts/intervals
             if (autoCaptureTimeout.current) {
                 clearTimeout(autoCaptureTimeout.current);
                 autoCaptureTimeout.current = null;
@@ -590,24 +644,29 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
 
             const imageUri = `file://${photo.path}`;
             
-            //const rotationAngle = 270; //for production
-            const rotationAngle = 0; //for development
+            // Orientation-aware rotation handling
+            let rotationAngle = 0;
+            if (deviceType === 'tablet') {
+                rotationAngle = isLandscape ? 0 : 0; // Adjust based on your camera setup
+            } else {
+                rotationAngle = isLandscape ? 0 : 270; // Adjust based on your camera setup
+            }
+            
             const compressedUri = await compressImage(imageUri, rotationAngle);
 
             try {
                 const originalStats = await RNFS.stat(imageUri);
                 const compressedStats = await RNFS.stat(compressedUri);
-                console.log('Original size:', Math.round(originalStats.size / 1024), 'KB');
-                console.log('Compressed size:', Math.round(compressedStats.size / 1024), 'KB');
+                console.log(`[${deviceType}-${orientation}] Original size:`, Math.round(originalStats.size / 1024), 'KB');
+                console.log(`[${deviceType}-${orientation}] Compressed size:`, Math.round(compressedStats.size / 1024), 'KB');
                 const compressionRatio = ((1 - compressedStats.size / originalStats.size) * 100);
-                console.log('Size reduction:', compressionRatio.toFixed(1) + '%');
+                console.log(`[${deviceType}-${orientation}] Size reduction:`, compressionRatio.toFixed(1) + '%');
             } catch (e) {
                 console.warn('Failed to get file stats:', e.message);
             }
 
             setCapturedImage(compressedUri);
 
-            // Reset detection states
             blinkDetected.current = false;
             eyeClosedTime.current = null;
             shakeHistory.current = [];
@@ -616,10 +675,9 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             setChallengeCompleted(false);
             setStableDetectionCount(0);
 
-            // Call success handler after a brief delay
             setTimeout(() => {
                 handleCaptureSuccess(compressedUri);
-            }, 1500);
+            }, 500);
 
             return true;
         } catch (error) {
@@ -627,7 +685,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             Alert.alert("Error", `Capture failed: ${error.message}`);
             return false;
         } finally {
-            setIsCapturing(false); // Ensure capturing state is reset
+            setIsCapturing(false);
         }
     }, [
         faces,
@@ -637,7 +695,10 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         currentChallenge,
         isCapturing,
         handleCaptureSuccess,
-        isFaceInTargetBox
+        isFaceInTargetBox,
+        deviceType,
+        orientation,
+        isLandscape
     ]);
 
     // Cleanup effects
@@ -659,7 +720,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         };
     }, [capturedImage, visible, handleModalClose]);
 
-    // Component unmount cleanup
     useEffect(() => {
         return () => {
             setIsActive(false);
@@ -683,15 +743,15 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 }
             }
             setIsCameraInitialized(true);
-            setDebugInfo('Camera initialized');
+            setDebugInfo(`Camera initialized for ${deviceType} in ${orientation} mode`);
         };
 
         if (visible) {
             initializeCamera();
         }
-    }, [hasPermission, requestPermission, visible]);
+    }, [hasPermission, requestPermission, visible, deviceType, orientation]);
 
-    // Camera device selection
+    // Camera device selection with tablet and orientation optimization
     const cameraDevice = useMemo(() => {
         if (!devices || Object.keys(devices).length === 0) {
             setDebugInfo('No camera devices found');
@@ -704,102 +764,96 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             Object.values(devices).find(d => d);
 
         if (device) {
-            setDebugInfo(`Using ${device.position} camera`);
+            setDebugInfo(`Using ${device.position} camera on ${deviceType} in ${orientation} mode`);
+            console.log(`[${deviceType}-${orientation}] Camera device:`, {
+                position: device.position,
+                formats: device.formats?.length || 0,
+                hasFlash: device.hasFlash,
+                hasTorch: device.hasTorch
+            });
         } else {
             setDebugInfo('No suitable camera device found');
         }
 
         return device;
-    }, [devices, cameraPosition]);
+    }, [devices, cameraPosition, deviceType, orientation]);
 
-    // Face detector configuration - Simplified for better compatibility
+    // Enhanced face detection options for tablets and orientation
     const faceDetectionOptions = useMemo(() => ({
-        performanceMode: 'accurate',
+        performanceMode: deviceType === 'tablet' ? 'fast' : 'accurate',
         landmarkMode: 'all',
         contourMode: 'none',
         classificationMode: 'all',
-        minFaceSize: 0.15,
-        trackingEnabled: true, // Enable tracking for smoother headshake detection
-    }), []);
+        minFaceSize: deviceType === 'tablet' ? 0.1 : 0.15,
+        trackingEnabled: true,
+    }), [deviceType]);
 
-    // Face detection callback - Single consolidated logic
+    // Enhanced face detection callback with tablet and orientation optimizations
     const handleFacesDetected = useCallback((detectedFaces) => {
         try {
             const now = Date.now();
-            // Throttle to 10 FPS for better head shake detection
-            if (now - lastFrameTime.current < 500) return;
+            // Adjusted throttling for tablets and orientation
+            const throttleMs = deviceType === 'tablet' ? 300 : 500;
+            if (now - lastFrameTime.current < throttleMs) return;
             lastFrameTime.current = now;
 
-            // Ensure we have a valid array
             const validFaces = Array.isArray(detectedFaces) ? detectedFaces : [];
-
-            // Only consider faces that are inside the target box
             const facesInTargetBox = validFaces.filter(face => isFaceInTargetBox(face));
 
-            // Update faces state with only the faces inside the box
             setFaces(facesInTargetBox);
 
-            // Only consider the first face if multiple are detected inside the box
             const hasOneFaceInBox = facesInTargetBox.length >= 1;
             const face = hasOneFaceInBox ? facesInTargetBox[0] : null;
 
             setFaceInTargetBox(hasOneFaceInBox);
 
-            // Handle challenge completion
             if (face && hasOneFaceInBox) {
                 const completed = detectLivenessAction(face);
                 setChallengeCompleted(completed);
 
-                // Auto capture logic with countdown
                 if (completed && autoCaptureEnabled && !isCapturing && !capturedImage) {
                     setStableDetectionCount(prev => {
                         const newCount = prev + 1;
 
-                        // For head shake, require fewer stable frames since it's a one-time action
-                        // For other challenges, require stable detection
-                        const requiredStableFrames = currentChallenge?.id === 'headshake' ? 1 :
-                            currentChallenge?.id === 'none' ? 3 : 2;
+                        // Adjusted stable frame requirements for tablets and orientation
+                        const requiredStableFrames = deviceType === 'tablet' ? 
+                            (currentChallenge?.id === 'headshake' ? 1 :
+                             currentChallenge?.id === 'none' ? 2 : 1) :
+                            (currentChallenge?.id === 'headshake' ? 1 :
+                             currentChallenge?.id === 'none' ? 3 : 2);
 
                         if (newCount >= requiredStableFrames) {
-                            // Start countdown if not already started
                             if (countdown === 0) {
                                 startCountdown();
                             }
-                            return newCount; // Keep the count
+                            return newCount;
                         }
 
                         return newCount;
                     });
                 } else {
-                    // Stop countdown if conditions not met
                     if (countdown > 0) {
                         stopCountdown();
                     }
                     setStableDetectionCount(0);
                 }
             } else {
-                // Stop countdown if no valid face or not in box
                 if (countdown > 0) {
                     stopCountdown();
                 }
                 setChallengeCompleted(false);
                 setStableDetectionCount(0);
 
-                // Reset states when no valid face or not in box
                 if (!hasOneFaceInBox) {
                     if (currentChallenge?.id === 'blink') {
                         blinkDetected.current = false;
                         eyeClosedTime.current = null;
                     }
-                    if (currentChallenge?.id === 'headshake') {
-                        // Don't reset head shake immediately to allow for movement
-                    }
                     setStableDetectionCount(0);
                 }
             }
 
-            // Enhanced debug info - show only faces in box
-            const debugDetails = `Challenge: ${currentChallenge?.id || 'none'}, Stable: ${stableDetectionCount}, Countdown: ${countdown}`;
+            const debugDetails = `[${deviceType}-${orientation}] Challenge: ${currentChallenge?.id || 'none'}, Stable: ${stableDetectionCount}, Countdown: ${countdown}`;
             setDebugInfo(`Faces In Box: ${facesInTargetBox.length}, Valid: ${hasOneFaceInBox}, Completed: ${challengeCompleted} | ${debugDetails}`);
 
         } catch (error) {
@@ -813,7 +867,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 stopCountdown();
             }
         }
-    }, [detectLivenessAction, autoCaptureEnabled, capturedImage, isFaceInTargetBox, currentChallenge, challengeCompleted, isCapturing, stableDetectionCount, countdown, startCountdown, stopCountdown]);
+    }, [detectLivenessAction, autoCaptureEnabled, capturedImage, isFaceInTargetBox, currentChallenge, challengeCompleted, isCapturing, stableDetectionCount, countdown, startCountdown, stopCountdown, deviceType, orientation]);
 
     // Toggle auto capture
     const toggleAutoCapture = useCallback(() => {
@@ -827,7 +881,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         shakeStartTime.current = null;
         headShakeDetected.current = false;
 
-        // Stop countdown when toggling
         stopCountdown();
     }, [stopCountdown]);
 
@@ -840,7 +893,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         if (autoCaptureEnabled) {
             return challengeCompleted;
         } else {
-            return challengeCompleted; // For manual mode, require challenge completion
+            return challengeCompleted;
         }
     };
 
@@ -848,7 +901,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
     const startCountdown = useCallback(() => {
         if (countdown > 0 || !autoCaptureEnabled || isCapturing) return;
 
-        setCountdown(1);
+        setCountdown(0);
         countdownInterval.current = setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
@@ -856,7 +909,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                     countdownInterval.current = null;
                     setCountdown(0);
 
-                    // Only trigger capture if conditions are still met
                     if (faceInTargetBox && challengeCompleted && !isCapturing) {
                         handleCapture();
                     }
@@ -864,7 +916,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 }
                 return prev - 1;
             });
-        }, 1000);
+        }, 0);
     }, [countdown, autoCaptureEnabled, isCapturing, faceInTargetBox, challengeCompleted, handleCapture]);
 
     const stopCountdown = useCallback(() => {
@@ -879,7 +931,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
     const getFaceDetectionMessage = () => {
         if (isCapturing) return "📸 Capturing...";
 
-        if (faces.length === 0) return "👤 No face detected in target area";
+        if (faces.length === 0) return `👤 No face detected in target area (${deviceType} ${orientation})`;
         if (faces.length > 1) return `👤 Only one face allowed in target area`;
 
         if (faces.length === 1) {
@@ -895,7 +947,6 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                 }
             }
 
-            // Show ONLY the current challenge step
             if (currentChallenge?.type === 'double') {
                 const currentStep = currentChallenge.completedActions.length;
                 const currentAction = getActionDisplay(currentChallenge.sequence[currentStep]);
@@ -927,56 +978,170 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
         return "#FF6B6B";
     };
 
-    const renderTargetBox = () => (
-        <View style={styles.targetBoxContainer}>
-            <View style={[styles.targetBox, { borderColor: getFaceDetectionColor() }]}>
-                <View style={[styles.targetBoxLine, styles.targetBoxTopLeft, { borderColor: getFaceDetectionColor() }]} />
-                <View style={[styles.targetBoxLine, styles.targetBoxTopRight, { borderColor: getFaceDetectionColor() }]} />
-                <View style={[styles.targetBoxLine, styles.targetBoxBottomLeft, { borderColor: getFaceDetectionColor() }]} />
-                <View style={[styles.targetBoxLine, styles.targetBoxBottomRight, { borderColor: getFaceDetectionColor() }]} />
-            </View>
-        </View>
-    );
-
-    const renderFaceDetectionStatus = () => (
-        <View style={styles.faceCountContainer}>
-            <Text style={[styles.faceCountText, { color: getFaceDetectionColor() }]}>
-                {getFaceDetectionMessage()}
-            </Text>
-        </View>
-    );
-
-    // Render camera controls
-    const renderControls = () => (
-        <View style={styles.controlsContainer}>
-            <TouchableOpacity
-                style={[styles.controlButton, autoCaptureEnabled && styles.controlButtonActive]}
-                onPress={toggleAutoCapture}
-            >
-                <Text style={styles.controlText}>
-                    {autoCaptureEnabled ? '🟢 Auto' : '⚪ Manual'}
-                </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-                style={[
-                    styles.captureButton,
-                    !isCaptureButtonEnabled() && styles.captureButtonDisabled
-                ]}
-                onPress={handleCapture}
-                disabled={!isCaptureButtonEnabled()}
-            >
+    // Enhanced target box rendering for tablets and orientation
+    const renderTargetBox = () => {
+        const { width: boxWidth, height: boxHeight } = targetBoxDimensions;
+        const cornerSize = deviceType === 'tablet' ? 
+            (isLandscape ? 50 : 60) : 
+            (isLandscape ? 40 : 50);
+        const borderWidth = deviceType === 'tablet' ? 
+            (isLandscape ? 4 : 5) : 
+            (isLandscape ? 3 : 4);
+        
+        return (
+            <View style={styles.targetBoxContainer}>
                 <View style={[
-                    styles.captureButtonInner,
-                    !isCaptureButtonEnabled() && styles.captureButtonInnerDisabled
-                ]} />
-            </TouchableOpacity>
+                    styles.targetBox, 
+                    { 
+                        borderColor: getFaceDetectionColor(),
+                        width: boxWidth,
+                        height: boxHeight
+                    }
+                ]}>
+                    <View style={[
+                        styles.targetBoxLine, 
+                        styles.targetBoxTopLeft, 
+                        { 
+                            borderColor: getFaceDetectionColor(),
+                            width: cornerSize,
+                            height: cornerSize,
+                            borderTopWidth: borderWidth,
+                            borderLeftWidth: borderWidth
+                        }
+                    ]} />
+                    <View style={[
+                        styles.targetBoxLine, 
+                        styles.targetBoxTopRight, 
+                        { 
+                            borderColor: getFaceDetectionColor(),
+                            width: cornerSize,
+                            height: cornerSize,
+                            borderTopWidth: borderWidth,
+                            borderRightWidth: borderWidth
+                        }
+                    ]} />
+                    <View style={[
+                        styles.targetBoxLine, 
+                        styles.targetBoxBottomLeft, 
+                        { 
+                            borderColor: getFaceDetectionColor(),
+                            width: cornerSize,
+                            height: cornerSize,
+                            borderBottomWidth: borderWidth,
+                            borderLeftWidth: borderWidth
+                        }
+                    ]} />
+                    <View style={[
+                        styles.targetBoxLine, 
+                        styles.targetBoxBottomRight, 
+                        { 
+                            borderColor: getFaceDetectionColor(),
+                            width: cornerSize,
+                            height: cornerSize,
+                            borderBottomWidth: borderWidth,
+                            borderRightWidth: borderWidth
+                        }
+                    ]} />
+                </View>
+            </View>
+        );
+    };
 
-            <TouchableOpacity onPress={onClose} style={styles.controlButton}>
-                <Text style={styles.controlText}>✖ Close</Text>
-            </TouchableOpacity>
-        </View>
-    );
+    // Enhanced status rendering for orientation
+    const renderFaceDetectionStatus = () => {
+        const fontSize = deviceType === 'tablet' ? 
+            (isLandscape ? 24 : 28) : 
+            (isLandscape ? 20 : 24);
+        const padding = deviceType === 'tablet' ? 
+            (isLandscape ? 16 : 20) : 
+            (isLandscape ? 12 : 16);
+        const topPosition = isLandscape ? 30 : 50;
+        
+        return (
+            <View style={[
+                styles.faceCountContainer, 
+                { 
+                    paddingHorizontal: padding,
+                    top: topPosition
+                }
+            ]}>
+                <Text style={[
+                    styles.faceCountText, 
+                    { 
+                        color: getFaceDetectionColor(),
+                        fontSize: fontSize
+                    }
+                ]}>
+                    {getFaceDetectionMessage()}
+                </Text>
+            </View>
+        );
+    };
+
+    // Enhanced controls rendering for tablets and orientation
+    const renderControls = () => {
+        const buttonSize = deviceType === 'tablet' ? 
+            (isLandscape ? 70 : 90) : 
+            (isLandscape ? 60 : 70);
+        const buttonPadding = deviceType === 'tablet' ? 
+            (isLandscape ? 15 : 20) : 
+            (isLandscape ? 12 : 15);
+        const fontSize = deviceType === 'tablet' ? 
+            (isLandscape ? 16 : 18) : 
+            (isLandscape ? 14 : 16);
+        const bottomPosition = isLandscape ? 20 : 40;
+        
+        return (
+            <View style={[
+                styles.controlsContainer,
+                { 
+                    bottom: bottomPosition,
+                    flexDirection: isLandscape ? 'row' : 'row',
+                    paddingHorizontal: isLandscape ? 20 : 0
+                }
+            ]}>
+                <TouchableOpacity
+                    style={[
+                        styles.controlButton, 
+                        autoCaptureEnabled && styles.controlButtonActive,
+                        { padding: buttonPadding }
+                    ]}
+                    onPress={toggleAutoCapture}
+                >
+                    <Text style={[styles.controlText, { fontSize }]}>
+                        {autoCaptureEnabled ? '🟢 Auto' : '⚪ Manual'}
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.captureButton,
+                        !isCaptureButtonEnabled() && styles.captureButtonDisabled,
+                        { width: buttonSize, height: buttonSize, borderRadius: buttonSize / 2 }
+                    ]}
+                    onPress={handleCapture}
+                    disabled={!isCaptureButtonEnabled()}
+                >
+                    <View style={[
+                        styles.captureButtonInner,
+                        !isCaptureButtonEnabled() && styles.captureButtonInnerDisabled,
+                        { 
+                            width: buttonSize - 10, 
+                            height: buttonSize - 10, 
+                            borderRadius: (buttonSize - 10) / 2 
+                        }
+                    ]} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    onPress={onClose} 
+                    style={[styles.controlButton, { padding: buttonPadding }]}
+                >
+                    <Text style={[styles.controlText, { fontSize }]}>✖ Close</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    };
 
     if (!isCameraInitialized) {
         return (
@@ -1049,7 +1214,7 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                         photo={true}
                         faceDetectionOptions={faceDetectionOptions}
                         faceDetectionCallback={handleFacesDetected}
-                        onInitialized={() => console.log('Camera initialized')}
+                        onInitialized={() => console.log(`Camera initialized for ${deviceType} in ${orientation} mode`)}
                         onError={(error) => {
                             console.error('Camera error:', error);
                             setDebugInfo(`Camera error: ${error.message}`);
@@ -1059,26 +1224,12 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
                     {renderTargetBox()}
                     {renderControls()}
                 </View>
-
-                {/* <Modal
-                    visible={showSuccessModal}
-                    transparent={true}
-                    animationType="fade"
-                    onRequestClose={() => setShowSuccessModal(false)}
-                >
-                    <View style={styles.successModalOverlay}>
-                        <View style={styles.successModal}>
-                            <Text style={styles.successIcon}>✅</Text>
-                            <Text style={styles.successTitle}>Success!</Text>
-                            <Text style={styles.successMessage}>Photo captured successfully</Text>
-                        </View>
-                    </View>
-                </Modal> */}
             </View>
         </Modal>
     );
 };
 
+// Enhanced styles with tablet and orientation support
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -1099,6 +1250,8 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 12,
         marginBottom: 2,
+        textAlign: 'center',
+        paddingHorizontal: 10,
     },
     permissionContainer: {
         flex: 1,
@@ -1124,9 +1277,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    cancelButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginTop: 20,
+    },
+    cancelButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+    },
     errorText: {
         color: '#FF4444',
         fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 10,
     },
     cameraContainer: {
         flex: 1,
@@ -1142,71 +1308,52 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     targetBox: {
-        width: 250,
-        height: 300,
         borderWidth: 2,
         position: 'relative',
     },
     targetBoxLine: {
         position: 'absolute',
-        width: 50,
-        height: 50,
     },
     targetBoxTopLeft: {
         top: -2,
         left: -2,
-        borderTopWidth: 4,
-        borderLeftWidth: 4,
     },
     targetBoxTopRight: {
         top: -2,
         right: -2,
-        borderTopWidth: 4,
-        borderRightWidth: 4,
     },
     targetBoxBottomLeft: {
         bottom: -2,
         left: -2,
-        borderBottomWidth: 4,
-        borderLeftWidth: 4,
     },
     targetBoxBottomRight: {
         bottom: -2,
         right: -2,
-        borderBottomWidth: 4,
-        borderRightWidth: 4,
     },
     faceCountContainer: {
         position: 'absolute',
-        top: 50,
         alignSelf: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 20,
-        maxWidth: '90%', // responsive container width
+        maxWidth: '90%',
     },
-
     faceCountText: {
-        fontSize: 24, // slightly smaller for flexibility
         fontWeight: 'bold',
         color: '#FFF',
         textAlign: 'center',
-        flexWrap: 'wrap',       // allow text wrapping if needed
+        flexWrap: 'wrap',
         includeFontPadding: false,
     },
     controlsContainer: {
         position: 'absolute',
-        bottom: 40,
         left: 0,
         right: 0,
-        flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
     },
     controlButton: {
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: 15,
         borderRadius: 30,
     },
     controlButtonActive: {
@@ -1214,12 +1361,8 @@ const styles = StyleSheet.create({
     },
     controlText: {
         color: '#FFF',
-        fontSize: 16,
     },
     captureButton: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
@@ -1228,86 +1371,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     captureButtonInner: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
         backgroundColor: '#FFF',
     },
     captureButtonInnerDisabled: {
         backgroundColor: '#888',
     },
-    previewContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: '#000',
-    },
-    previewImage: {
-        width: '100%',
-        height: '80%',
-    },
-    closePreviewButton: {
-        position: 'absolute',
-        top: 40,
-        right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closePreviewText: {
-        color: '#FFF',
-        fontSize: 20,
-    },
-    successModalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    successModal: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 30,
-        width: '80%',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    successIcon: {
-        fontSize: 60,
-        marginBottom: 20,
-    },
-    successTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1C6758',
-        marginBottom: 10,
-    },
-    successMessage: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    successModalButton: {
-        backgroundColor: '#1C6758',
-        paddingHorizontal: 30,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    successModalButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    }
 });
 
 export default AutoImageCaptureModal;

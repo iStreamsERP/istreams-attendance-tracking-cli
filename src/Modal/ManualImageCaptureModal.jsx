@@ -18,6 +18,7 @@ import {
 import { compressImage } from "../Utils/UriToBase64Utils";
 import RNFS from 'react-native-fs';
 import { GlobalStyles } from "../Styles/styles";
+import { useTheme } from "../Context/ThemeContext";
 import LottieView from "lottie-react-native";
 
 const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
@@ -25,6 +26,9 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
     const [cameraPosition, setCameraPosition] = useState('back');
     const [capturedImage, setCapturedImage] = useState(null);
     const [isCapturing, setIsCapturing] = useState(false);
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     const cameraRef = useRef(null);
     const { hasPermission, requestPermission } = useCameraPermission();
@@ -55,20 +59,7 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
 
             const originalUri = `file://${photo.path}`;
 
-            const rotationAngle = 0;
-
-            const compressedUri = await compressImage(originalUri, rotationAngle);
-
-            setCapturedImage(compressedUri);
-
-            if (compressedUri !== originalUri) {
-                try {
-                    await RNFS.unlink(originalUri);
-                    console.log('Original file cleaned up');
-                } catch (e) {
-                    console.warn('Failed to delete original file:', e.message);
-                }
-            }
+            setCapturedImage(originalUri);
 
         } catch (error) {
             console.error('Error capturing image:', error);
@@ -129,25 +120,25 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
                                 photo={true}
                             />
                         )}
-                        <View style={[GlobalStyles.twoInputContainer, styles.rotateControl]}>
+                        <View style={[globalStyles.twoInputContainer, styles.rotateControl]}>
                             <LottieView
                                 source={require('../../assets/animations/rotate_phone.json')}
                                 style={{ width: 70, height: 70 }}
                                 autoPlay
                                 loop
                             />
-                            <Text style={[GlobalStyles.subtitle, { color: '#FFF' }]}>Rotate Your Mobile to Capture</Text>
+                            <Text style={[globalStyles.subtitle, { color: '#FFF' }]}>Rotate Your Mobile to Capture</Text>
                         </View>
 
                         <View style={styles.controlsContainer}>
                             <TouchableOpacity onPress={toggleCamera} style={styles.controlButton}>
-                                <Text style={[GlobalStyles.subtitle, { color: '#FFF' }]}>🔄 Flip</Text>
+                                <Text style={[globalStyles.subtitle, { color: '#FFF' }]}>🔄 Flip</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleCapture} style={styles.captureButton}>
                                 <View style={styles.captureButtonInner} />
                             </TouchableOpacity>
                             <TouchableOpacity onPress={onClose} style={styles.controlButton}>
-                                <Text style={[GlobalStyles.subtitle, { color: 'red' }]}>✖ Close</Text>
+                                <Text style={[globalStyles.subtitle, { color: 'red' }]}>✖ Close</Text>
                             </TouchableOpacity>
                         </View>
                     </>

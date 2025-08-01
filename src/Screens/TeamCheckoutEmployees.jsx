@@ -11,6 +11,7 @@ import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import RNFS from 'react-native-fs';
+import { useTheme } from '../Context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,6 +20,9 @@ const TeamCheckoutEmployees = () => {
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     const hasNonMatchedFacesRef = useRef(false);
     const [btnloading, setbtnLoading] = useState(false);
@@ -95,7 +99,7 @@ const TeamCheckoutEmployees = () => {
             Alert.alert('Missing required data. Please ensure photo is captured.');
             return;
         }
-        if (!projectNo || !projectName) {
+        if (!projectNo) {
             Alert.alert('Now Select Project Details to Continue.');
             return;
         }
@@ -132,7 +136,7 @@ const TeamCheckoutEmployees = () => {
                 selectedEmp: empData,
                 base64Img: base64Img,
                 navigation,
-                returnTo: 'TeamCheckout',
+                returnTo: 'SwitchTeamCheckoutScreen',
                 setErrorMessage
             });
         } catch (error) {
@@ -147,31 +151,43 @@ const TeamCheckoutEmployees = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Check-out Employees" />
 
-            <View style={styles.projectContainer}>
-                <Text style={[GlobalStyles.subtitle_2, { color: '#0685de' }]}> {projectNo}</Text>
-                <Text style={GlobalStyles.subtitle}> {projectName}</Text>
+            <View style={globalStyles.projectContainer}>
+                <Text style={[globalStyles.subtitle_2, { color: '#0685de' }]}> {projectNo}</Text>
+                <Text style={globalStyles.subtitle}> {projectName}</Text>
             </View>
 
-            <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
+            <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
                 <View style={styles.imageContainer}>
-                    <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                    <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                     {capturedImage ? (
                         <Image
                             source={{ uri: capturedImage }}
-                            style={styles.empImageDisplay}
+                            style={globalStyles.uploadedEmpImage}
                         />
                     ) : (
-                        <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                        <View style={[globalStyles.empImageDisplay, styles.placeholderContainer]}>
                             <Text style={styles.placeholderText}>No Image</Text>
                         </View>
                     )}
                 </View>
 
-                <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
-            </View> 
+                <Button
+                    icon={"reload"}
+                    mode="contained"
+                    title="Reload Page"
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
+                    onPress={reload} >
+                    Retry
+                </Button>
+            </View>
 
             <FlatList
                 data={selectedEmp}
@@ -181,11 +197,18 @@ const TeamCheckoutEmployees = () => {
                 }
             />
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveTeamCheckin}
                     disabled={btnloading}
-                    loading={btnloading}>
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
+                    loading={btnloading}
+                >
                     Save
                 </Button>
             </View>
@@ -194,19 +217,7 @@ const TeamCheckoutEmployees = () => {
 }
 
 const styles = StyleSheet.create({
-    projectContainer: {
-        backgroundColor: '#d7dff7',
-        borderRadius: 15,
-        padding: 10,
-        marginVertical: 10,
-    },
-    empImageDisplay: {
-        width: width * 0.20,
-        height: width * 0.20,
-        borderRadius: (width * 0.20) / 2,
-        borderWidth: 2,
-        borderColor: '#ddd',
-    },
+
 });
 
 export default TeamCheckoutEmployees;

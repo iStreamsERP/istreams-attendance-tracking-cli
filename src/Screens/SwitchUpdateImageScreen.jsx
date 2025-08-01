@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import ChangeEmpImageScreen from './ChangeEmpImageScreen';
 import EmployeeAddComponent from '../Components/EmployeeAddComponent';
 import Header from '../Components/Header';
@@ -7,9 +7,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlobalStyles } from '../Styles/styles';
 import { useAuth } from '../Context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../Context/ThemeContext';
 
 const SwitchUpdateImageScreen = () => {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [selectedSection, setSelectedSection] = useState('section1');
     const [employeeData, setEmployeeData] = useState();
     const { userData } = useAuth();
@@ -30,22 +34,22 @@ const SwitchUpdateImageScreen = () => {
     }, []);
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Update Image" />
             {/* Toggle Buttons */}
-            <View style={styles.toggleContainer}>
+            <View style={globalStyles.toggleContainer}>
                 <TouchableOpacity
                     style={[
-                        styles.button,
-                        selectedSection === 'section1' ? styles.activeButton : styles.inactiveButton,
-                        styles.leftButton,
+                        globalStyles.toggleButton,
+                        selectedSection === 'section1' ? globalStyles.activeButton : globalStyles.inactiveButton,
+                        globalStyles.leftButton,
                     ]}
                     onPress={() => setSelectedSection('section1')}
                 >
                     <Text
                         style={[
-                            GlobalStyles.subtitle_3,
-                            selectedSection === 'section1' ? styles.activeText : styles.inactiveText,
+                            globalStyles.subtitle_3,
+                            selectedSection === 'section1' ? globalStyles.activeText : globalStyles.inactiveText,
                         ]}
                     >
                         Self Update
@@ -54,16 +58,16 @@ const SwitchUpdateImageScreen = () => {
 
                 <TouchableOpacity
                     style={[
-                        styles.button,
-                        selectedSection === 'section2' ? styles.activeButton : styles.inactiveButton,
-                        styles.rightButton,
+                        globalStyles.toggleButton,
+                        selectedSection === 'section2' ? globalStyles.activeButton : globalStyles.inactiveButton,
+                        globalStyles.rightButton,
                     ]}
                     onPress={() => setSelectedSection('section2')}
                 >
                     <Text
                         style={[
-                            GlobalStyles.subtitle_3,
-                            selectedSection === 'section2' ? styles.activeText : styles.inactiveText,
+                            globalStyles.subtitle_3,
+                            selectedSection === 'section2' ? globalStyles.activeText : globalStyles.inactiveText,
                         ]}
                     >
                         Other Employee
@@ -84,41 +88,3 @@ const SwitchUpdateImageScreen = () => {
 };
 
 export default SwitchUpdateImageScreen;
-
-const styles = StyleSheet.create({
-    toggleContainer: {
-        marginTop: 10,
-        flexDirection: 'row',
-        backgroundColor: '#fddde0',
-        borderRadius: 25,
-        padding: 3,
-        alignSelf: 'center',
-    },
-    button: {
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        flex: 1,
-        alignItems: 'center',
-        borderRadius: 25,
-    },
-    leftButton: {
-        borderTopLeftRadius: 25,
-        borderBottomLeftRadius: 25,
-    },
-    rightButton: {
-        borderTopRightRadius: 25,
-        borderBottomRightRadius: 25,
-    },
-    activeButton: {
-        backgroundColor: '#f44336',
-    },
-    inactiveButton: {
-        backgroundColor: 'transparent',
-    },
-    activeText: {
-        color: '#fff',
-    },
-    inactiveText: {
-        color: '#999',
-    },
-});

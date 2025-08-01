@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, Alert, Image, StyleSheet } from 'react-native';
+import { Text, View, Alert, Image, StyleSheet, ScrollView } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
@@ -17,17 +17,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../Context/AuthContext';
 import { useCheckin } from '../Context/CheckinContext';
+import { useTheme } from '../Context/ThemeContext';
 
 const SelfCheckin = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const route = useRoute();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const { selectedLocation } = route.params || {};
     const { userData } = useAuth();
     const { getLastCheckin, recordCheckin } = useCheckin();
 
     // Existing states
-    const [isPopupVisible, setPopupVisible] = useState(false);
     const [btnloading, setbtnLoading] = useState(false);
     const [entryDate, setEntryDate] = useState('');
     const [entryTime, setEntryTime] = useState('');
@@ -123,7 +126,9 @@ const SelfCheckin = () => {
 
     useEffect(() => {
         if (groupedData && groupedData.length > 0) {
-            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces");
+            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Employee");
+
+            console.log('hasNonMatchedFaces:', hasNonMatchedFaces);
 
             if (hasNonMatchedFaces) {
                 setEmpNo([]);
@@ -144,9 +149,9 @@ const SelfCheckin = () => {
 
                 // Generate matched image URL for the first matched employee
                 if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=${domain}&EmpNo=${extractedEmpNos[0]}`;
+                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=${domain}&EmpNo=${extractedEmpNos[0]}`;
                     console.log('Generated matched image URL:', imageUrl);
-                    
+
                     setMatchedImage(imageUrl);
                 }
             }
@@ -215,8 +220,11 @@ const SelfCheckin = () => {
         const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
 
         if (lastTime && now - lastTime < fiveMinutes) {
-            const remaining = Math.ceil((fiveMinutes - (now - lastTime)) / 1000);
-            Alert.alert('Already Checked In Within 5 Minutes', `Try again after ${remaining} seconds`);
+            const remainingMinutes = Math.ceil((fiveMinutes - (now - lastTime)) / (1000 * 60));
+
+            console.log('lastTime:', lastTime, 'now:', now, 'remainingMinutes:', remainingMinutes);
+
+            Alert.alert('Already Checked In Within 5 Minutes', `Try again after ${remainingMinutes} minutes`);
             return;
         }
 
@@ -261,41 +269,44 @@ const SelfCheckin = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title={`${headerName} Check-in`} />
-            <View style={{ flex: 1 }}>
-                <View style={[GlobalStyles.locationContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+            <ScrollView style={{ flex: 1 }}>
+                <View style={[globalStyles.locationContainer, { flexDirection: 'row', alignItems: 'center' }]}>
                     <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                    <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                    <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
                 </View>
 
-                <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
-                    <View style={GlobalStyles.container1}>
+                <View style={[globalStyles.twoInputContainer, { marginTop: 10 }]}>
+                    <View style={globalStyles.container1}>
                         <TextInput
                             mode="outlined"
                             label="Entry Date"
                             value={entryDate}
+                            theme={theme}
                             editable={false}
                         />
                     </View>
 
-                    <View style={GlobalStyles.container2}>
+                    <View style={globalStyles.container2}>
                         <TextInput
                             mode="outlined"
                             label="Entry Time"
                             value={entryTime}
+                            theme={theme}
                             editable={false}
                         />
                     </View>
                 </View>
 
-                <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
+                <Text style={[globalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
                 <View>
                     <TextInput
                         mode="outlined"
                         label="Project No"
                         //onPressIn={() => setPopupVisible(true)}
                         value={projectNo}
+                        theme={theme}
                         style={{ width: '70%', marginTop: 5 }}
                         placeholder="Enter Project No"
                         //showSoftInputOnFocus={false} 
@@ -315,38 +326,58 @@ const SelfCheckin = () => {
                         mode="outlined"
                         label="Project Name"
                         value={projectName}
+                        theme={theme}
                         showSoftInputOnFocus={false}
                         placeholder="Enter Project Name" />
                 </View>
 
-                <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginBottom: 10 }]} >
+                <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginBottom: 10 }]} >
                     <Button
                         icon={"reload"}
                         mode="contained"
                         title="Reload Page"
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
                         onPress={() => { resetFaceStates(); setShowCameraModal(true); }} >
                         Retake
                     </Button>
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
+                    <Button
+                        icon={"reload"}
+                        mode="contained"
+                        title="Reload Page"
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
+                        onPress={reload}
+                    >
+                        Retry
+                    </Button>
                 </View>
 
-                <View style={GlobalStyles.twoInputContainer}>
+                <View style={globalStyles.twoInputContainer}>
                     <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                        <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                         {capturedImage ? (
                             <Image
                                 source={{ uri: capturedImage }}
-                                style={GlobalStyles.empImageDisplay}
+                                style={globalStyles.uploadedEmpImage}
                             />
                         ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                            <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
                                 <Text style={styles.placeholderText}>No Image</Text>
                             </View>
                         )}
                     </View>
 
                     <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>
+                        <Text style={globalStyles.subtitle_1}>
                             {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
                                 ? "No Match Found"
                                 : ""}
@@ -354,14 +385,14 @@ const SelfCheckin = () => {
                         {matchedImage ? (
                             <Image
                                 source={{ uri: matchedImage }}
-                                style={GlobalStyles.empImageDisplay}
+                                style={globalStyles.uploadedEmpImage}
                                 onError={(error) => {
                                     console.log('Image load error:', error);
                                     setMatchedImage(null);
                                 }}
                             />
                         ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                            <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
                                 <Text style={styles.placeholderText}>
                                     {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
                                         ? "No Match Found"
@@ -387,12 +418,18 @@ const SelfCheckin = () => {
                     recogloading={recogloading}
                     groupedData={groupedData}
                 />
-            </View>
+            </ScrollView>
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveSelfCheckin}
                     disabled={btnloading}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     loading={btnloading}>
                     Save
                 </Button>

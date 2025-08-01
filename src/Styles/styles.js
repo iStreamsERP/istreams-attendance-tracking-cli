@@ -1,9 +1,10 @@
 import { StyleSheet, Dimensions } from "react-native";
 const { width, height } = Dimensions.get('window');
 
-export const GlobalStyles = StyleSheet.create({
+export const GlobalStyles = (colors = {}) => StyleSheet.create({
     pageContainer: {
         flex: 1,
+        backgroundColor: colors.background,
         paddingTop: 15,
         paddingHorizontal: 10,
     },
@@ -15,6 +16,12 @@ export const GlobalStyles = StyleSheet.create({
     twoInputContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+    },
+    twoInputContainer1: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        columnGap: 10,
     },
     container1: {
         flex: 1,
@@ -34,78 +41,83 @@ export const GlobalStyles = StyleSheet.create({
         marginTop: 10,
         width: width * 0.94,
         height: width * 0.75,
-        borderWidth: 2,
-        borderColor: '#ddd',
+        borderWidth: 1,
+        borderColor: colors.lightGray,
     },
     title: {
         fontFamily: 'Inter-Bold',
         fontSize: 20,
-        color: '#000',
+        color: colors.text,
     },
     title1: {
         fontSize: 19,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     subtitle: {
         fontSize: 15,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     subtitle_1: {
         fontSize: 17,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     subtitle_2: {
         fontSize: 15,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     subtitle_3: {
         fontSize: 13,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     subtitle_4: {
         fontSize: 12,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     body: {
         fontSize: 16,
         fontFamily: 'Inter-Regular',
-        color: '#000',
+        color: colors.text,
     },
     content: {
         fontSize: 14,
         fontFamily: 'Inter-Regular',
-        color: '#000',
+        color: colors.text,
     },
     content1: {
         fontSize: 15,
         fontFamily: 'Inter-SemiBold',
-        color: '#000',
+        color: colors.text,
+    },
+    content2: {
+        fontSize: 14,
+        fontFamily: 'Inter-SemiBold',
+        color: colors.text,
     },
     small_text: {
         fontSize: 12,
         fontFamily: 'Inter-Regular',
-        color: '#000',
+        color: colors.text,
     },
     txtEmpNo: {
         fontSize: 14,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     txtEmpName: {
         fontSize: 15,
         fontFamily: 'Inter-Bold',
-        color: '#000',
+        color: colors.text,
     },
     txtDesignation: {
         fontSize: 14,
         fontFamily: 'Inter-Regular',
-        color: '#000',
+        color: colors.text,
     },
     bottomButtonContainer: {
         marginVertical: 10,
@@ -141,14 +153,71 @@ export const GlobalStyles = StyleSheet.create({
     my_10: {
         marginVertical: 10,
     },
+    my_20: {
+        marginVertical: 20,
+    },
+    my_5: {
+        marginVertical: 5,
+    },
     mb_10: {
         marginBottom: 10,
+    },
+    mb_5: {
+        marginBottom: 5,
+    },
+    mb_20: {
+        marginBottom: 20,
     },
     mt_10: {
         marginTop: 10,
     },
     pl_10: {
         paddingLeft: 10,
+    },
+    justifyContentCenter: {
+        justifyContent: 'center',
+    },
+    alignItemsCenter: {
+        alignItems: 'center',
+    },
+    justifySpaceBetween: {
+        justifyContent: 'space-between',
+    },
+    mr_10: {
+        marginRight: 10,
+    },
+    ml_10: {
+        marginLeft: 10,
+    },
+    m_10: {
+        margin: 10,
+    },
+    p_10: {
+        padding: 10,
+    },
+    py_10: {
+        paddingVertical: 10,
+    },
+    px_5: {
+        paddingHorizontal: 5,
+    },
+    px_10: {
+        paddingHorizontal: 10,
+    },
+    px_15: {
+        paddingHorizontal: 15,
+    },
+    px_20: {
+        paddingHorizontal: 20,
+    },
+    px_30: {
+        paddingHorizontal: 30,
+    },
+    px_40: {
+        paddingHorizontal: 40,
+    },
+    px_50: {
+        paddingHorizontal: 50,
     },
 
     // Switch for Email/Phone
@@ -207,7 +276,7 @@ export const GlobalStyles = StyleSheet.create({
     height_45: {
         height: 45,
     },
-    mt_5:{
+    mt_5: {
         marginTop: 5,
     },
     // Chip Button for Category
@@ -229,5 +298,151 @@ export const GlobalStyles = StyleSheet.create({
     },
     chipTextActive: {
         color: '#fff',
+    },
+
+    // HomeScreen Icon
+    iconContainer: {
+        height: 45,
+        width: 45,
+        borderRadius: 25,
+        backgroundColor: colors.card,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+
+    // Round Uploaded Emp Image
+    uploadedEmpImage: {
+        width: width * 0.20,
+        height: width * 0.20,
+        borderRadius: (width * 0.20) / 2,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    projectContainer: {
+        borderRadius: 15,
+        padding: 10,
+        marginVertical: 10,
+        backgroundColor: colors.card,
+    },
+
+    // Center Round Img / Container
+    centerRoundImgContainer: {
+        alignSelf: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    centerRoundImg: {
+        width: width * 0.30,
+        height: width * 0.30,
+        borderRadius: (width * 0.35) / 2,
+        backgroundColor: '#e0e0e0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    roundImg: {
+        width: '100%',
+        height: '100%',
+        borderRadius: (width * 0.35) / 2,
+    },
+
+    // Switch Button 
+    toggleContainer: {
+        marginTop: 10,
+        flexDirection: 'row',
+        backgroundColor: '#fddde0',
+        borderRadius: 25,
+        padding: 3,
+        alignSelf: 'center',
+    },
+    toggleButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 25,
+        flex: 1,
+        alignItems: 'center',
+        borderRadius: 25,
+    },
+    leftButton: {
+        borderTopLeftRadius: 25,
+        borderBottomLeftRadius: 25,
+    },
+    rightButton: {
+        borderTopRightRadius: 25,
+        borderBottomRightRadius: 25,
+    },
+    activeButton: {
+        backgroundColor: '#f44336',
+    },
+    inactiveButton: {
+        backgroundColor: 'transparent',
+    },
+    activeText: {
+        color: '#fff',
+    },
+    inactiveText: {
+        color: '#999',
+    },
+
+    summaryCard: {
+        marginVertical: 10,
+        elevation: 2,
+        width: '95%',
+        alignSelf: 'center',
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        backgroundColor: colors.card,
+    },
+
+    summaryRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: 10,
+    },
+
+    summaryItem: {
+        flex: 1,
+        minWidth: '30%',
+        marginVertical: 6,
+    },
+
+    summaryLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#777',
+        marginBottom: 4,
+        textAlign: 'left',
+    },
+
+    summaryValue: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#222',
+        textAlign: 'left',
+    },
+
+    //Popup
+    backdrop: {
+        flex: 1,
+        backgroundColor: '#00000066',
+    },
+    popup: {
+        position: 'absolute',
+        top: '33%',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderTopRightRadius: 30,
+        borderTopLeftRadius: 30,
+        padding: 10,
+        elevation: 10,
+    },
+    item: {
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 15,
+        marginBottom: 5,
     },
 });

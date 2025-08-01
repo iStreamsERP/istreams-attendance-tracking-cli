@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, Alert, StyleSheet, Image } from 'react-native';
+import { Text, View, Alert, StyleSheet, Image, ScrollView } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
@@ -15,12 +15,16 @@ import { ImageRecognition } from '../Utils/ImageRecognition';
 import ImageRecognitionResult from '../Components/ImageRecognitionResult';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SelfCheckout = () => {
     const [isPopupVisible, setPopupVisible] = useState(false);
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const { selectedLocation } = useRoute().params;
     const { userData } = useAuth();
     const [btnloading, setbtnLoading] = useState(false);
@@ -175,7 +179,7 @@ const SelfCheckout = () => {
 
                 // Generate matched image URL for the first matched employee
                 if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://23.105.135.231:8082/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
+                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
                     setMatchedImage(imageUrl);
                 }
             }
@@ -244,44 +248,47 @@ const SelfCheckout = () => {
     };
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title={`${headerName} Check-out`} />
 
-            <View style={{ flex: 1 }}>
-                <View style={GlobalStyles.locationContainer}>
+            <ScrollView style={{ flex: 1 }}>
+                <View style={globalStyles.locationContainer}>
                     <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                    <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                    <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
                 </View>
 
-                <View style={[GlobalStyles.twoInputContainer, { marginTop: 10 }]}>
-                    <View style={GlobalStyles.container1}>
+                <View style={[globalStyles.twoInputContainer, { marginTop: 10 }]}>
+                    <View style={globalStyles.container1}>
                         <TextInput
                             mode="outlined"
                             label="Entry Date"
                             value={entryDate}
+                            theme={theme}
                             editable={false}
                             onPressIn={() => setShowDatePicker(true)}
                         />
                     </View>
 
-                    <View style={GlobalStyles.container2}>
+                    <View style={globalStyles.container2}>
                         <TextInput
                             mode="outlined"
                             label="Entry Time"
                             value={entryTime}
+                            theme={theme}
                             editable={false}
                             onPressIn={() => setShowTimePicker(true)}
                         />
                     </View>
                 </View>
 
-                <Text style={[GlobalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
+                <Text style={[globalStyles.subtitle_1, { marginTop: 10 }]}>Project Details</Text>
                 <View>
                     <TextInput
                         mode="outlined"
                         label="Project No"
                         onPressIn={() => setPopupVisible(true)}
                         value={projectNo}
+                        theme={theme}
                         style={{ width: '70%', marginTop: 5 }}
                         placeholder="Enter Project No"
                         showSoftInputOnFocus={false} />
@@ -297,32 +304,57 @@ const SelfCheckout = () => {
                         mode="outlined"
                         label="Project Name"
                         value={projectName}
+                        theme={theme}
                         showSoftInputOnFocus={false}
                         placeholder="Enter Project Name" />
                 </View>
 
-                <View style={[GlobalStyles.camButtonContainer, GlobalStyles.twoInputContainer, { marginBottom: 10 }]}>
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={() => { resetFaceStates(); setShowCameraModal(true); }} >Retake</Button>
-                    <Button icon={"reload"} mode="contained" title="Reload Page" onPress={reload} >Retry</Button>
+                <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginBottom: 10 }]}>
+                    <Button
+                        icon={"reload"}
+                        mode="contained"
+                        title="Reload Page"
+                        onPress={() => { resetFaceStates(); setShowCameraModal(true); }}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }} >
+                        Retake
+                    </Button>
+                    <Button
+                        icon={"reload"}
+                        mode="contained"
+                        title="Reload Page"
+                        onPress={reload}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}>
+                        Retry
+                    </Button>
                 </View>
 
-                <View style={GlobalStyles.twoInputContainer}>
+                <View style={globalStyles.twoInputContainer}>
                     <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>Uploaded Image</Text>
+                        <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                         {capturedImage ? (
                             <Image
                                 source={{ uri: capturedImage }}
-                                style={GlobalStyles.empImageDisplay}
+                                style={globalStyles.uploadedEmpImage}
                             />
                         ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                            <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
                                 <Text style={styles.placeholderText}>No Image</Text>
                             </View>
                         )}
                     </View>
 
                     <View style={styles.imageContainer}>
-                        <Text style={GlobalStyles.subtitle_1}>
+                        <Text style={globalStyles.subtitle_1}>
                             {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
                                 ? "No Match Found"
                                 : ""}
@@ -330,14 +362,14 @@ const SelfCheckout = () => {
                         {matchedImage ? (
                             <Image
                                 source={{ uri: matchedImage }}
-                                style={GlobalStyles.empImageDisplay}
+                                style={globalStyles.uploadedEmpImage}
                                 onError={(error) => {
                                     console.log('Image load error:', error);
                                     setMatchedImage(null);
                                 }}
                             />
                         ) : (
-                            <View style={[GlobalStyles.empImageDisplay, styles.placeholderContainer]}>
+                            <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
                                 <Text style={styles.placeholderText}>
                                     {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
                                         ? "No Match Found"
@@ -363,11 +395,17 @@ const SelfCheckout = () => {
                     recogloading={recogloading}
                     groupedData={groupedData}
                 />
-            </View>
+            </ScrollView>
 
-            <View style={GlobalStyles.bottomButtonContainer}>
+            <View style={globalStyles.bottomButtonContainer}>
                 <Button mode="contained"
                     onPress={SaveSelfCheckout}
+                    theme={{
+                        colors: {
+                            primary: colors.primary,
+                            disabled: colors.lightGray, // <- set your desired disabled color
+                        },
+                    }}
                     loading={btnloading}
                     disabled={btnloading}>
                     Save
@@ -378,12 +416,6 @@ const SelfCheckout = () => {
 };
 
 const styles = StyleSheet.create({
-    empImage: {
-        width: 70,
-        height: 70,
-        borderRadius: 40,
-        marginRight: 10,
-    },
     imageContainer: {
         flex: 1,
         alignItems: 'center',

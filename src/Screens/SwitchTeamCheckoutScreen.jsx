@@ -8,9 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TeamCheckout from './TeamCheckout';
 import { useRoute } from '@react-navigation/native';
 import TeamCheckout_Manual from './TeamCheckout_Manual';
+import { useTheme } from '../Context/ThemeContext';
 
 const SwitchTeamCheckoutScreen = () => {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [selectedSection, setSelectedSection] = useState('section1');
     const route = useRoute();
     const { selectedLocation } = route.params || {};
@@ -32,22 +36,22 @@ const SwitchTeamCheckoutScreen = () => {
     }, []);
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Team Check-out" />
             {/* Toggle Buttons */}
-            <View style={styles.toggleContainer}>
+            <View style={globalStyles.toggleContainer}>
                 <TouchableOpacity
                     style={[
-                        styles.button,
-                        selectedSection === 'section1' ? styles.activeButton : styles.inactiveButton,
-                        styles.leftButton,
+                        globalStyles.toggleButton,
+                        selectedSection === 'section1' ? globalStyles.activeButton : globalStyles.inactiveButton,
+                        globalStyles.leftButton,
                     ]}
                     onPress={() => setSelectedSection('section1')}
                 >
                     <Text
                         style={[
-                            GlobalStyles.subtitle_3,
-                            selectedSection === 'section1' ? styles.activeText : styles.inactiveText,
+                            globalStyles.subtitle_3,
+                            selectedSection === 'section1' ? globalStyles.activeText : globalStyles.inactiveText,
                         ]}
                     >
                         Auto-Checkout
@@ -56,16 +60,16 @@ const SwitchTeamCheckoutScreen = () => {
 
                 <TouchableOpacity
                     style={[
-                        styles.button,
-                        selectedSection === 'section2' ? styles.activeButton : styles.inactiveButton,
-                        styles.rightButton,
+                        globalStyles.toggleButton,
+                        selectedSection === 'section2' ? globalStyles.activeButton : globalStyles.inactiveButton,
+                        globalStyles.rightButton,
                     ]}
                     onPress={() => setSelectedSection('section2')}
                 >
                     <Text
                         style={[
-                            GlobalStyles.subtitle_3,
-                            selectedSection === 'section2' ? styles.activeText : styles.inactiveText,
+                            globalStyles.subtitle_3,
+                            selectedSection === 'section2' ? globalStyles.activeText : globalStyles.inactiveText,
                         ]}
                     >
                         Manual-Checkout
@@ -86,41 +90,3 @@ const SwitchTeamCheckoutScreen = () => {
 };
 
 export default SwitchTeamCheckoutScreen;
-
-const styles = StyleSheet.create({
-    toggleContainer: {
-        marginTop: 5,
-        flexDirection: 'row',
-        backgroundColor: '#fddde0',
-        borderRadius: 25,
-        padding: 3,
-        alignSelf: 'center',
-    },
-    button: {
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        flex: 1,
-        alignItems: 'center',
-        borderRadius: 25,
-    },
-    leftButton: {
-        borderTopLeftRadius: 25,
-        borderBottomLeftRadius: 25,
-    },
-    rightButton: {
-        borderTopRightRadius: 25,
-        borderBottomRightRadius: 25,
-    },
-    activeButton: {
-        backgroundColor: '#f44336',
-    },
-    inactiveButton: {
-        backgroundColor: 'transparent',
-    },
-    activeText: {
-        color: '#fff',
-    },
-    inactiveText: {
-        color: '#999',
-    },
-});

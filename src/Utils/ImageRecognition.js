@@ -53,7 +53,7 @@ export const ImageRecognition = async (
 
         try {
             const response = await axios.post(
-                'http://23.105.135.231:8100/ImageMatching',
+                'http://103.168.19.35:8100/ImageMatching',
                 formData,
                 {
                     headers: {
@@ -74,7 +74,7 @@ export const ImageRecognition = async (
                 setErrorMessage(null);
 
                 const response = await fetch(
-                    `http://23.105.135.231:8082/api/View/get-folder-images/${domainPart}/${DEVICE_ID}/${refNo}`
+                    `http://103.168.19.35:8070/api/View/get-folder-images/${domainPart}/${DEVICE_ID}/${refNo}`
                 );
 
                 const text = await response.text();
@@ -121,8 +121,6 @@ export const ImageRecognition = async (
 
                         GetMatched_EmpList = await callSoapService(clientURL, 'Get_Emp_BasicInfo', GetMatched_EmpParameter);
                     }
-
-                    console.log(GetMatched_EmpList);
 
                     const enrichedMatched = await Promise.all(
                         GetMatched_EmpList.map(async (emp) => {

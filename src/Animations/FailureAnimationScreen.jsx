@@ -3,11 +3,14 @@ import { View, StyleSheet, Text, Animated } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Button } from 'react-native-paper';
+import { useTheme } from '../Context/ThemeContext';
 
 export default function FailureAnimationScreen() {
     const hasNavigated = useRef(false);
     const navigation = useNavigation();
     const route = useRoute();
+    const { theme } = useTheme();
+    const colors = theme.colors;
     const [countdown, setCountdown] = useState(5);
 
     const { message, details, returnTo } = route.params;
@@ -47,7 +50,7 @@ export default function FailureAnimationScreen() {
 
     return (
         <View style={styles.overlay}>
-            <Animated.View style={[styles.modal, { opacity: fadeAnim }]}>
+            <Animated.View style={[styles.modal, { opacity: fadeAnim, backgroundColor: colors.card }]}>
                 <LottieView
                     source={require('../../assets/animations/notFound_animation.json')}
                     autoPlay
@@ -83,7 +86,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modal: {
-        backgroundColor: '#fff',
         borderRadius: 20,
         padding: 25,
         width: '80%',

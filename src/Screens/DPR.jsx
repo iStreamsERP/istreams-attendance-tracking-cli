@@ -13,11 +13,15 @@ import ProjectBOQListPopUp from '../Modal/ProjectBOQListPopUp';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
 import ManualImageCaptureModal from '../Modal/ManualImageCaptureModal';
 import { useAuth } from '../Context/AuthContext';
+import { useTheme } from '../Context/ThemeContext';
 
 const DPR = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const { userData } = useAuth();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
     const [locationName, setLocationName] = useState('Fetching location...');
     const [projectNo, setProjectNo] = useState('');
     const [projectName, setProjectName] = useState('');
@@ -121,155 +125,164 @@ const DPR = () => {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ flex: 1 }}>
 
-            <View style={{ flex: 1 }}>
+            <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
+                <Header title="DPR" />
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
-                        <Header title="DPR" />
-
-                        <View>
-                            <View style={GlobalStyles.locationContainer}>
-                                <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                                <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
-                            </View>
+                    <View>
+                        <View style={globalStyles.locationContainer}>
+                            <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
+                            <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
                         </View>
+                    </View>
 
-                        <View style={[GlobalStyles.twoInputContainer]}>
-                            <View style={GlobalStyles.container1}>
-                                <TextInput
-                                    mode="outlined"
-                                    label="Start Time"
-                                    value={startTime}
-                                    editable={false}
-                                />
-                            </View>
+                    <View style={[globalStyles.twoInputContainer, globalStyles.my_10]}>
+                        <TextInput
+                            mode="outlined"
+                            label="Start Time"
+                            value={startTime}
+                            style={globalStyles.container1}
+                            theme={theme}
+                            editable={false}
+                        />
 
-                            <View style={GlobalStyles.container2}>
-                                <TextInput
-                                    mode="outlined"
-                                    label="End Time"
-                                    value={endTime}
-                                    editable={false}
-                                />
-                            </View>
-                        </View>
+                        <TextInput
+                            mode="outlined"
+                            label="End Time"
+                            value={endTime}
+                            style={globalStyles.container2}
+                            theme={theme}
+                            editable={false}
+                        />
+                    </View>
 
-                        <Text style={GlobalStyles.subtitle_1}>Project Details</Text>
-                        <View style={[GlobalStyles.twoInputContainer]}>
-                            <View style={GlobalStyles.container1}>
-                                <TextInput
-                                    mode="outlined"
-                                    label="Project No"
-                                    onPressIn={() => setPopupVisible(true)}
-                                    value={projectNo}
-                                    placeholder="Enter Project No"
-                                    showSoftInputOnFocus={false} />
-                                <ProjectListPopup
-                                    visible={isPopupVisible}
-                                    onClose={() => setPopupVisible(false)}
-                                    onSelect={(project) => {
-                                        handleProjectSelect(project);
-                                        setPopupVisible(false);
-                                    }}
-                                />
-                            </View>
-                            <View style={GlobalStyles.container2}>
-                                <TextInput
-                                    mode="outlined"
-                                    label="Entry Date"
-                                    value={entryDate}
-                                    editable={false}
-                                />
-                            </View>
-                        </View>
+                    <Text style={globalStyles.subtitle_1}>Project Details</Text>
+                    <View style={[globalStyles.twoInputContainer, globalStyles.my_10]}>
+                        <TextInput
+                            mode="outlined"
+                            label="Project No"
+                            onPressIn={() => setPopupVisible(true)}
+                            value={projectNo}
+                            style={globalStyles.container1}
+                            theme={theme}
+                            placeholder="Enter Project No"
+                            showSoftInputOnFocus={false} />
+                        <ProjectListPopup
+                            visible={isPopupVisible}
+                            onClose={() => setPopupVisible(false)}
+                            onSelect={(project) => {
+                                handleProjectSelect(project);
+                                setPopupVisible(false);
+                            }}
+                        />
+                        <TextInput
+                            mode="outlined"
+                            label="Entry Date"
+                            theme={theme}
+                            style={globalStyles.container2}
+                            value={entryDate}
+                            editable={false}
+                        />
+                    </View>
 
-                        <View>
-                            <TextInput
-                                mode="outlined"
-                                label="Project Name"
-                                value={projectName}
-                                multiline
-                                numberOfLines={2}
-                                editable={false}
+                    <TextInput
+                        mode="outlined"
+                        label="Project Name"
+                        value={projectName}
+                        theme={theme}
+                        multiline
+                        numberOfLines={2}
+                        editable={false}
+                    />
+
+                    <View style={globalStyles.my_10}>
+                        <Text style={globalStyles.subtitle_1}>BOQ Details</Text>
+                        <TextInput
+                            mode="outlined"
+                            label="BOQ No"
+                            value={boqNo}
+                            theme={theme}
+                            onPressIn={() => setBoqPopupVisible(true)}
+                            showSoftInputOnFocus={false}
+                        />
+                        <ProjectBOQListPopUp
+                            visible={isBoqPopupVisible}
+                            onClose={() => setBoqPopupVisible(false)}
+                            onSelect={(boq) => {
+                                handleProjectBOQSelect(boq);
+                                setBoqPopupVisible(false);
+                            }}
+                            data={boqList}
+                        />
+
+                        <TextInput
+                            mode="outlined"
+                            label="Activity"
+                            placeholder='Enter the Activity taken place'
+                            value={activity}
+                            theme={theme}
+                            onChangeText={setActivity}
+                        />
+
+                        <TextInput
+                            mode="outlined"
+                            label="Completed Quantity"
+                            value={compQty}
+                            theme={theme}
+                            onChangeText={setCompQty}
+                        />
+
+                        <TextInput
+                            mode="outlined"
+                            label="Percentage"
+                            value={percentage}
+                            theme={theme}
+                            onChangeText={setPercentage}
+                        />
+
+                        <Snackbar
+                            visible={snackbarVisible}
+                            onDismiss={() => setSnackbarVisible(false)}
+                            theme={theme}
+                            duration={3000}
+                            action={{
+                                label: 'OK',
+                                onPress: () => setSnackbarVisible(false),
+                            }}
+                        >
+                            {snackbarMsg}
+                        </Snackbar>
+
+                        <View style={globalStyles.camButtonContainer}>
+                            <Button icon="camera" mode="contained-tonal"
+                                theme={theme}
+                                onPress={() => setCameraVisible(true)}>
+                                Capture Project Image
+                            </Button>
+
+                            <ManualImageCaptureModal
+                                visible={cameraVisible}
+                                onClose={() => setCameraVisible(false)}
+                                onCapture={handleCapture}
                             />
                         </View>
-
-                        <View>
-                            <Text style={GlobalStyles.subtitle_1}>BOQ Details</Text>
-                            <TextInput
-                                mode="outlined"
-                                label="BOQ No"
-                                value={boqNo}
-                                onPressIn={() => setBoqPopupVisible(true)}
-                                showSoftInputOnFocus={false}
+                        <View style={globalStyles.imageContainer}>
+                            <Image
+                                source={{ uri: capturedImage }}
+                                style={globalStyles.fullImage}
                             />
-                            <ProjectBOQListPopUp
-                                visible={isBoqPopupVisible}
-                                onClose={() => setBoqPopupVisible(false)}
-                                onSelect={(boq) => {
-                                    handleProjectBOQSelect(boq);
-                                    setBoqPopupVisible(false);
-                                }}
-                                data={boqList}
-                            />
-
-                            <TextInput
-                                mode="outlined"
-                                label="Activity"
-                                placeholder='Enter the Activity taken place'
-                                value={activity}
-                                onChangeText={setActivity}
-                            />
-
-                            <TextInput
-                                mode="outlined"
-                                label="Completed Quantity"
-                                value={compQty}
-                                onChangeText={setCompQty}
-                            />
-
-                            <TextInput
-                                mode="outlined"
-                                label="Percentage"
-                                value={percentage}
-                                onChangeText={setPercentage}
-                            />
-
-                            <Snackbar
-                                visible={snackbarVisible}
-                                onDismiss={() => setSnackbarVisible(false)}
-                                duration={3000}
-                                action={{
-                                    label: 'OK',
-                                    onPress: () => setSnackbarVisible(false),
-                                }}
-                            >
-                                {snackbarMsg}
-                            </Snackbar>
-
-                            <View style={GlobalStyles.camButtonContainer}>
-                                <Button icon="camera" mode="contained-tonal" onPress={() => setCameraVisible(true)}>
-                                    Capture Project Image
-                                </Button>
-
-                                <ManualImageCaptureModal
-                                    visible={cameraVisible}
-                                    onClose={() => setCameraVisible(false)}
-                                    onCapture={handleCapture}
-                                />
-                            </View>
-                            <View style={GlobalStyles.imageContainer}>
-                                <Image
-                                    source={{ uri: capturedImage }}
-                                    style={GlobalStyles.fullImage}
-                                />
-                            </View>
                         </View>
                     </View>
                 </ScrollView>
 
-                <View style={[GlobalStyles.bottomButtonContainer, { paddingHorizontal: 10, paddingBottom: insets.bottom }]}>
+                <View style={globalStyles.bottomButtonContainer}>
                     <Button mode="contained"
                         onPress={handleNavigation}
+                        theme={{
+                            colors: {
+                                primary: colors.primary,
+                                disabled: colors.lightGray, // <- set your desired disabled color
+                            },
+                        }}
                         loading={btnloading}
                         disabled={btnloading}>
                         Next

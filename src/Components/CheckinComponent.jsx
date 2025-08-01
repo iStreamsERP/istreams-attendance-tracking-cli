@@ -8,7 +8,8 @@ import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import ProjectListPopup from '../Modal/ProjectListPopUp';
 import { formatDate, formatTime } from '../Utils/dataTimeUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { useTheme } from '../Context/ThemeContext';
+import { handlePickImageOptimized } from '../Utils/nativeCameraFunction';
 
 const CheckinComponent = ({
     entryDate,
@@ -21,6 +22,8 @@ const CheckinComponent = ({
     setCapturedImage,
     cameraVisible,
     setCameraVisible,
+    useNativeCamera,
+    setUseNativeCamera,
     setCoordinates,
     locationName,
     setLocationName,
@@ -31,6 +34,9 @@ const CheckinComponent = ({
 }) => {
     const [isPopupVisible, setPopupVisible] = useState(false);
     const [address, setAddress] = useState('');
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
 
     useEffect(() => {
         const loadOrUpdateLocation = async () => {
@@ -42,15 +48,12 @@ const CheckinComponent = ({
                     const stored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
                     if (!stored || JSON.stringify(JSON.parse(stored)) !== JSON.stringify(locationFromParams)) {
                         await AsyncStorage.setItem('CURRENT_OFC_LOCATION', JSON.stringify(locationFromParams));
-                        console.log('Stored new location:', locationFromParams);
                     }
                 }
 
                 // Load final location from storage (which is either the newly saved one or the existing one)
                 const finalStored = await AsyncStorage.getItem('CURRENT_OFC_LOCATION');
                 const location = finalStored ? JSON.parse(finalStored) : null;
-
-                console.log('Using location:', location);
 
                 const [projectNo, projectName] = location?.name?.split(' - ') || ['', ''];
                 setProjectNo(projectNo);
@@ -72,49 +75,67 @@ const CheckinComponent = ({
         setEntryTime(formatTime(now));
     }, []);
 
-    const handleCapture = (uri) => {
-        setCapturedImage(uri);
+    useEffect(() => {
+        const loadPreference = async () => {
+            const value = await AsyncStorage.getItem('USE_MANUAL_CAPTURE');
+
+            if (value !== null) {
+                setUseNativeCamera(JSON.parse(value));
+            }
+        };
+        loadPreference();
+    }, []);
+
+    const handleCapturePress = () => {
+        if (useNativeCamera) {
+            handlePickImageOptimized(setCapturedImage); // Default picker
+        } else {
+            setCameraVisible(true);  // Open custom camera modal
+        }
     };
 
     return (
-        <View>
-            <View style={GlobalStyles.locationContainer}>
+        <ScrollView>
+            <View style={globalStyles.locationContainer}>
                 <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
-                <Text style={[GlobalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
+                <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
             </View>
 
-            <View style={[GlobalStyles.twoInputContainer, { marginTop: 5 }]}>
-                <View style={GlobalStyles.container1}>
+            <View style={[globalStyles.twoInputContainer, { marginTop: 5 }]}>
+                <View style={globalStyles.container1}>
                     <TextInput
                         mode="outlined"
                         label="Entry Date"
                         value={entryDate}
+                        theme={theme}
                         editable={false}
                         style={{ height: 45 }}
                         onPressIn={() => setShowDatePicker(true)}
                     />
                 </View>
 
-                <View style={GlobalStyles.container2}>
+                <View style={globalStyles.container2}>
                     <TextInput
                         mode="outlined"
                         label="Entry Time"
                         value={entryTime}
                         editable={false}
+                        theme={theme}
                         style={{ height: 45 }}
                         onPressIn={() => setShowTimePicker(true)}
                     />
                 </View>
             </View>
 
-            <Text style={[GlobalStyles.subtitle_1, { marginTop: 5 }]}>Project Details</Text>
+            <Text style={[globalStyles.subtitle_1, { marginTop: 5 }]}>Project Details</Text>
             <View>
                 <TextInput
                     mode="outlined"
                     label="Project No"
                     onPressIn={() => setPopupVisible(true)}
                     value={projectNo}
-                    style={{ width: '70%', marginTop: 5, height: 45 }}
+                    theme={theme}
+                    style={{ width: '70%', marginTop: 5, height: 40 }}
                     placeholder="Enter Project No"
                     editable={false} />
                 {/* <ProjectListPopup
@@ -130,28 +151,34 @@ const CheckinComponent = ({
                     label="Project Name"
                     value={projectName}
                     showSoftInputOnFocus={false}
-                    style={{ height: 45 }}
+                    theme={theme}
+                    style={{ height: 40 }}
                     placeholder="Enter Project Name" />
             </View>
-            <View style={GlobalStyles.camButtonContainer}>
-                <Button icon="camera" mode="contained-tonal" onPress={() => setCameraVisible(true)}>
+            <View style={globalStyles.camButtonContainer}>
+                <Button icon="camera" mode="contained-tonal"
+                    onPress={handleCapturePress}
+                >
                     Capture Image
                 </Button>
 
                 <ManualImageCaptureModal
                     visible={cameraVisible}
                     onClose={() => setCameraVisible(false)}
-                    onCapture={handleCapture}
+                    onCapture={(uri) => {
+                        setCapturedImage(uri);
+                        setCameraVisible(false);
+                    }}
                 />
             </View>
-            <View style={GlobalStyles.flex_1}>
+            <View style={globalStyles.flex_1}>
                 <Image
                     source={{ uri: capturedImage }}
-                    style={GlobalStyles.fullImage}
+                    style={globalStyles.fullImage}
                 />
             </View>
-        </View>
-    )
-}
+        </ScrollView>
+    );
+};
 
 export default CheckinComponent;

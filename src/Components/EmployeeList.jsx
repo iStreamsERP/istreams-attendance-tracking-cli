@@ -4,20 +4,28 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Checkbox, Searchbar } from 'react-native-paper';
 import Header from './Header';
+import { useTheme } from '../Context/ThemeContext';
 import { GlobalStyles } from '../Styles/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const EmployeeList = () => {
+    const insets = useSafeAreaInsets();
+    const route = useRoute();
+    const { onSelect } = route.params;
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const globalStyles = GlobalStyles(colors);
+
     const [loading, setLoading] = useState(true);
     const navigation = useNavigation();
     const [employees, setEmployees] = useState([]);
     const [checkedItems, setCheckedItems] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
-    const insets = useSafeAreaInsets();
-    const route = useRoute();
-    const { onSelect } = route.params;
 
     const getData = async () => {
+        if (loading) return;
+
+        setLoading(true);
         try {
             const storedData = await AsyncStorage.getItem('EmployeeList');
             if (storedData !== null) {
@@ -54,9 +62,9 @@ const EmployeeList = () => {
 
     // Filter employees based on the search query
     const filteredEmployees = employees.filter(emp => {
-        const empName = emp.EMP_NAME || ''; 
-        const empNo = emp.EMP_NO ? emp.EMP_NO.toString() : ''; 
-        const designation = emp.DESIGNATION || ''; 
+        const empName = emp.EMP_NAME || '';
+        const empNo = emp.EMP_NO ? emp.EMP_NO.toString() : '';
+        const designation = emp.DESIGNATION || '';
 
         return (
             empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -66,24 +74,24 @@ const EmployeeList = () => {
     });
 
     return (
-        <View style={[GlobalStyles.pageContainer, { paddingTop: insets.top }]}>
+        <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Employee List" />
             {/* Search Input */}
             <Searchbar
-                style={styles.inputContainer}
+                style={globalStyles.my_10}
                 placeholder="Search Employees"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
             />
 
             {/* Selected Employee Count */}
-            <Text style={[GlobalStyles.subtitle_2, { marginBottom: 10 }]}>
+            <Text style={[globalStyles.subtitle_2, { marginBottom: 10 }]}>
                 Selected Employees: {checkedCount}
             </Text>
 
             {loading ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#0000ff" />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             ) : (
                 <FlatList
@@ -91,19 +99,20 @@ const EmployeeList = () => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.EMP_NO.toString()}
                     renderItem={({ item }) => (
-                        <View style={styles.container}>
+                        <View style={[styles.container, { backgroundColor: colors.card }]}>
                             <Image
                                 source={require('../../assets/human.png')}
                                 style={{ width: 60, height: 60, borderRadius: 30 }}
                             />
                             <View style={styles.innerContainer}>
-                                <Text style={GlobalStyles.txtEmpNo}>{item.EMP_NO}</Text>
-                                <Text style={GlobalStyles.txtEmpName}>{item.EMP_NAME}</Text>
-                                <Text style={GlobalStyles.txtDesignation}>{item.DESIGNATION}</Text>
+                                <Text style={[globalStyles.txtEmpNo, { color: colors.primary }]}>{item.EMP_NO}</Text>
+                                <Text style={globalStyles.txtEmpName}>{item.EMP_NAME}</Text>
+                                <Text style={globalStyles.txtDesignation}>{item.DESIGNATION}</Text>
                             </View>
                             <View style={styles.checkBoxSection}>
                                 <Checkbox
                                     status={checkedItems[item.EMP_NO] ? 'checked' : 'unchecked'}
+                                    color={colors.primary}
                                     onPress={() => toggleCheckbox(item.EMP_NO)}
                                 />
                             </View>
@@ -134,7 +143,6 @@ export default EmployeeList;
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        backgroundColor: '#dddddb',
         justifyContent: 'space-between',
         borderRadius: 15,
         padding: 10,
@@ -148,9 +156,6 @@ const styles = StyleSheet.create({
     checkBoxSection: {
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    inputContainer: {
-        marginVertical: 10,
     },
     floatingButton: {
         position: 'absolute',
