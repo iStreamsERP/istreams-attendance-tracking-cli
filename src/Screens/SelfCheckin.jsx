@@ -62,8 +62,7 @@ const SelfCheckin = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
-
-    const domain = userEmail.split('@')[1].split('.')[0];
+    const userDomain = userData.userDomain;
 
     useEffect(() => {
         const now = new Date();
@@ -126,9 +125,9 @@ const SelfCheckin = () => {
 
     useEffect(() => {
         if (groupedData && groupedData.length > 0) {
-            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Employee");
+            console.log('Grouped Data:', groupedData);
 
-            console.log('hasNonMatchedFaces:', hasNonMatchedFaces);
+            const hasNonMatchedFaces = Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Employee");
 
             if (hasNonMatchedFaces) {
                 setEmpNo([]);
@@ -149,7 +148,7 @@ const SelfCheckin = () => {
 
                 // Generate matched image URL for the first matched employee
                 if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=${domain}&EmpNo=${extractedEmpNos[0]}`;
+                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=${userDomain}&EmpNo=${extractedEmpNos[0]}`;
                     console.log('Generated matched image URL:', imageUrl);
 
                     setMatchedImage(imageUrl);
@@ -181,6 +180,7 @@ const SelfCheckin = () => {
         await ImageRecognition(
             capturedImage,
             userEmail,
+            userDomain,
             userName,
             deviceId,
             clientURL,
@@ -222,8 +222,6 @@ const SelfCheckin = () => {
         if (lastTime && now - lastTime < fiveMinutes) {
             const remainingMinutes = Math.ceil((fiveMinutes - (now - lastTime)) / (1000 * 60));
 
-            console.log('lastTime:', lastTime, 'now:', now, 'remainingMinutes:', remainingMinutes);
-
             Alert.alert('Already Checked In Within 5 Minutes', `Try again after ${remainingMinutes} minutes`);
             return;
         }
@@ -253,6 +251,7 @@ const SelfCheckin = () => {
                 returnTo: 'SelfCheckin',
                 setErrorMessage
             });
+
             recordCheckin(selectedEmp);
 
             setSaveCompleted(true);
@@ -414,10 +413,12 @@ const SelfCheckin = () => {
                     />
                 )}
 
-                <ImageRecognitionResult
-                    recogloading={recogloading}
-                    groupedData={groupedData}
-                />
+                <View>
+                    <ImageRecognitionResult
+                        recogloading={recogloading}
+                        groupedData={groupedData}
+                    />
+                </View>
             </ScrollView>
 
             <View style={globalStyles.bottomButtonContainer}>
@@ -427,7 +428,7 @@ const SelfCheckin = () => {
                     theme={{
                         colors: {
                             primary: colors.primary,
-                            disabled: colors.lightGray, // <- set your desired disabled color
+                            disabled: colors.lightGray,
                         },
                     }}
                     loading={btnloading}>

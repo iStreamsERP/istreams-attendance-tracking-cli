@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Text, View, StyleSheet, FlatList, Alert, Image, Dimensions } from 'react-native';
+import { Text, View, FlatList, Alert, Image } from 'react-native';
 import { Button } from 'react-native-paper';
 import Header from '../Components/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -12,8 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import RNFS from 'react-native-fs';
 import { useTheme } from '../Context/ThemeContext';
-
-const { width, height } = Dimensions.get('window');
 
 const TeamCheckoutEmployees = () => {
     const navigation = useNavigation();
@@ -46,11 +44,13 @@ const TeamCheckoutEmployees = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
+    const userDomain = userData.userDomain;
 
     const handleImageRecognition = async () => {
         await ImageRecognition(
             capturedImage,
             userEmail,
+            userDomain,
             userName,
             deviceId,
             clientURL,
@@ -160,7 +160,7 @@ const TeamCheckoutEmployees = () => {
             </View>
 
             <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
-                <View style={styles.imageContainer}>
+                <View>
                     <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                     {capturedImage ? (
                         <Image
@@ -168,8 +168,8 @@ const TeamCheckoutEmployees = () => {
                             style={globalStyles.uploadedEmpImage}
                         />
                     ) : (
-                        <View style={[globalStyles.empImageDisplay, styles.placeholderContainer]}>
-                            <Text style={styles.placeholderText}>No Image</Text>
+                        <View style={[globalStyles.empImageDisplay]}>
+                            <Text style={globalStyles.subtitle_2}>No Image</Text>
                         </View>
                     )}
                 </View>
@@ -215,9 +215,5 @@ const TeamCheckoutEmployees = () => {
         </View>
     )
 }
-
-const styles = StyleSheet.create({
-
-});
 
 export default TeamCheckoutEmployees;

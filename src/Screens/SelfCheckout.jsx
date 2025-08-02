@@ -56,6 +56,7 @@ const SelfCheckout = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
+    const userDomain = userData.userDomain;
 
     useEffect(() => {
         setShowCameraModal(true);
@@ -109,6 +110,7 @@ const SelfCheckout = () => {
         await ImageRecognition(
             capturedImage,
             userEmail,
+            userDomain,
             userName,
             deviceId,
             clientURL,
@@ -179,7 +181,7 @@ const SelfCheckout = () => {
 
                 // Generate matched image URL for the first matched employee
                 if (extractedEmpNos.length > 0) {
-                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=demo&EmpNo=${extractedEmpNos[0]}`;
+                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=${userDomain}&EmpNo=${extractedEmpNos[0]}`;
                     setMatchedImage(imageUrl);
                 }
             }
@@ -251,7 +253,7 @@ const SelfCheckout = () => {
         <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title={`${headerName} Check-out`} />
 
-            <ScrollView style={{ flex: 1 }}>
+            <ScrollView style={globalStyles.flex_1}>
                 <View style={globalStyles.locationContainer}>
                     <FontAwesome6Icon name="location-dot" size={20} color="#70706d" />
                     <Text style={[globalStyles.subtitle, { marginLeft: 5 }]}>{locationName}</Text>
@@ -339,7 +341,7 @@ const SelfCheckout = () => {
                 </View>
 
                 <View style={globalStyles.twoInputContainer}>
-                    <View style={styles.imageContainer}>
+                    <View style={[globalStyles.flex_1]}>
                         <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                         {capturedImage ? (
                             <Image
@@ -347,8 +349,8 @@ const SelfCheckout = () => {
                                 style={globalStyles.uploadedEmpImage}
                             />
                         ) : (
-                            <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
-                                <Text style={styles.placeholderText}>No Image</Text>
+                            <View style={[globalStyles.uploadedEmpImage]}>
+                                <Text style={globalStyles.small_text}>No Image</Text>
                             </View>
                         )}
                     </View>
@@ -370,7 +372,7 @@ const SelfCheckout = () => {
                             />
                         ) : (
                             <View style={[globalStyles.uploadedEmpImage, styles.placeholderContainer]}>
-                                <Text style={styles.placeholderText}>
+                                <Text style={[globalStyles.content, globalStyles.txt_center]}>
                                     {Array.isArray(groupedData) && groupedData.some(item => item.title === "Non-Matched Faces")
                                         ? "No Match Found"
                                         : ""}
@@ -416,10 +418,6 @@ const SelfCheckout = () => {
 };
 
 const styles = StyleSheet.create({
-    imageContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
     placeholderContainer: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -427,11 +425,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderStyle: 'dashed',
-    },
-    placeholderText: {
-        color: '#666',
-        fontSize: 12,
-        textAlign: 'center',
     },
 });
 

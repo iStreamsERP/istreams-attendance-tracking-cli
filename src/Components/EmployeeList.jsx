@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Checkbox, Searchbar } from 'react-native-paper';
@@ -23,11 +23,11 @@ const EmployeeList = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const getData = async () => {
-        if (loading) return;
-
         setLoading(true);
         try {
             const storedData = await AsyncStorage.getItem('EmployeeList');
+            console.log('storedData', storedData);
+
             if (storedData !== null) {
                 const parsedData = JSON.parse(storedData);
                 setEmployees(parsedData);
@@ -38,11 +38,12 @@ const EmployeeList = () => {
                     initialChecks[emp.EMP_NO] = false;
                 });
                 setCheckedItems(initialChecks);
+            } else {
+                setEmployees([]); // clear if no data
             }
         } catch (e) {
             console.error('Failed to retrieve data:', e);
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
@@ -99,15 +100,16 @@ const EmployeeList = () => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.EMP_NO.toString()}
                     renderItem={({ item }) => (
-                        <View style={[styles.container, { backgroundColor: colors.card }]}>
+                        <TouchableOpacity style={[globalStyles.twoInputContainer, styles.container, { backgroundColor: colors.card }]}
+                            onPress={() => toggleCheckbox(item.EMP_NO)}>
                             <Image
-                                source={require('../../assets/human.png')}
-                                style={{ width: 60, height: 60, borderRadius: 30 }}
+                                source={require('../../assets/images.png')}
+                                style={globalStyles.empImageInList}
                             />
-                            <View style={styles.innerContainer}>
-                                <Text style={[globalStyles.txtEmpNo, { color: colors.primary }]}>{item.EMP_NO}</Text>
-                                <Text style={globalStyles.txtEmpName}>{item.EMP_NAME}</Text>
-                                <Text style={globalStyles.txtDesignation}>{item.DESIGNATION}</Text>
+                            <View style={[globalStyles.flex_1, globalStyles.ml_10, globalStyles.justifyContentCenter]}>
+                                <Text style={[globalStyles.subtitle, { color: colors.primary }]}>{item.EMP_NO}</Text>
+                                <Text style={globalStyles.subtitle_2}>{item.EMP_NAME}</Text>
+                                <Text style={globalStyles.content}>{item.DESIGNATION}</Text>
                             </View>
                             <View style={styles.checkBoxSection}>
                                 <Checkbox
@@ -116,7 +118,7 @@ const EmployeeList = () => {
                                     onPress={() => toggleCheckbox(item.EMP_NO)}
                                 />
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     )}
                 />
             )}
@@ -131,7 +133,7 @@ const EmployeeList = () => {
                         navigation.goBack();
                     }}
                 >
-                    <Text style={styles.floatingButtonText}>✓</Text>
+                    <Text style={[globalStyles.bigtitle, { color: 'white' }]}>✓</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -142,16 +144,9 @@ export default EmployeeList;
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         borderRadius: 15,
         padding: 10,
         marginBottom: 10,
-    },
-    innerContainer: {
-        flex: 1,
-        marginLeft: 10,
-        justifyContent: 'center',
     },
     checkBoxSection: {
         justifyContent: 'center',
@@ -168,10 +163,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5,
-    },
-    floatingButtonText: {
-        color: '#FFFFFF',
-        fontSize: 24,
-        fontWeight: 'bold',
     },
 });

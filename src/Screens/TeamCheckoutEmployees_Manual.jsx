@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet, FlatList, Image, Alert } from 'react-native';
+import { Text, View, StyleSheet, FlatList, Image, Alert, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../Components/Header';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
@@ -114,7 +114,7 @@ const TeamCheckoutEmployees_Manual = () => {
     };
     const SaveTeamCheckout = async () => {
         setbtnLoading(true);
-        
+
         const selectedEmp = checkinEmp.filter(emp => checkedItems[emp.emp_no]);
 
         if (selectedEmp.length === 0) {
@@ -164,9 +164,9 @@ const TeamCheckoutEmployees_Manual = () => {
         <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Check-out Employees" />
 
-            <View style={styles.employeeListContainer}>
+            <View style={[globalStyles.flex_1, globalStyles.my_10]}>
                 {loading ? (
-                    <View style={styles.loaderContainer}>
+                    <View style={[globalStyles.flex_1, globalStyles.justalignCenter]}>
                         <ActivityIndicator size="small" color={colors.primary} />
                     </View>
                 ) : (
@@ -175,16 +175,18 @@ const TeamCheckoutEmployees_Manual = () => {
                         showsVerticalScrollIndicator={false}
                         keyExtractor={(item, index) => (item.EMP_NO ? item.EMP_NO.toString() : `emp-${index}`)}
                         renderItem={({ item }) => (
-                            <View style={[styles.container, { backgroundColor: colors.card }]}>
+                            <TouchableOpacity style={[globalStyles.twoInputContainer1,
+                            globalStyles.p_10, globalStyles.mb_10, globalStyles.borderRadius_15, { backgroundColor: colors.card }]}
+                                onPress={() => toggleCheckbox(item.emp_no)}>
                                 <Image
                                     source={
                                         item.EMP_IMAGE
                                             ? { uri: `data:image/png;base64,${item.EMP_IMAGE}` }
                                             : require('../../assets/human.png')
                                     }
-                                    style={styles.empImage}
+                                    style={globalStyles.empImageInList}
                                 />
-                                <View style={styles.innerContainer}>
+                                <View style={[globalStyles.flex_1, globalStyles.justifyContentCenter]}>
                                     <Text style={[globalStyles.subtitle, { color: colors.primary }]}>{item.emp_no}</Text>
                                     <Text style={globalStyles.subtitle_2}>{item.emp_name}</Text>
                                     <View style={globalStyles.twoInputContainer}>
@@ -192,14 +194,14 @@ const TeamCheckoutEmployees_Manual = () => {
                                         <Text style={globalStyles.subtitle_3}>{item.log_datetime.toLocaleString()}</Text>
                                     </View>
                                 </View>
-                                <View style={styles.checkBoxSection}>
+                                <View style={globalStyles.justalignCenter}>
                                     <Checkbox
                                         status={checkedItems[item.emp_no] ? 'checked' : 'unchecked'}
                                         color={colors.primary}
                                         onPress={() => toggleCheckbox(item.emp_no)}
                                     />
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         )}
                     />
                 )}
@@ -222,34 +224,5 @@ const TeamCheckoutEmployees_Manual = () => {
         </View>
     )
 }
-
-const styles = StyleSheet.create({
-    employeeListContainer: {
-        flex: 1,
-        marginVertical: 10
-    },
-    empImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 10,
-    },
-    container: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        borderRadius: 15,
-        padding: 10,
-        marginBottom: 10
-    },
-    innerContainer: {
-        flex: 1,
-        marginLeft: 10,
-        justifyContent: 'center',
-    },
-    checkBoxSection: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
 
 export default TeamCheckoutEmployees_Manual;

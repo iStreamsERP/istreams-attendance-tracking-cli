@@ -49,7 +49,8 @@ const SelectEmpReportScreen = () => {
             setEmpNo,
             setEmpName,
             setDesignation,
-            userData.userEmail
+            userData.userEmail,
+            userData.userDomain
         );
 
         if (base64Img) {

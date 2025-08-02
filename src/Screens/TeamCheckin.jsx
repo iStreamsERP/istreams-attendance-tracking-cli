@@ -4,14 +4,12 @@ import { Button } from 'react-native-paper';
 import { GlobalStyles } from '../Styles/styles';
 import { useNavigation } from '@react-navigation/native';
 import CheckinComponent from '../Components/CheckinComponent';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { useTheme } from '../Context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TeamCheckin = ({ selectedLocation }) => {
     const navigation = useNavigation();
-    const insets = useSafeAreaInsets();
     const { theme } = useTheme();
     const colors = theme.colors;
     const globalStyles = GlobalStyles(colors);
@@ -50,7 +48,6 @@ const TeamCheckin = ({ selectedLocation }) => {
         requestLocationPermission();
     }, []);
 
-    // === Load camera preference here ===
     useEffect(() => {
         const loadCameraPreference = async () => {
             const value = await AsyncStorage.getItem('USE_MANUAL_CAPTURE');
@@ -107,6 +104,5 @@ const TeamCheckin = ({ selectedLocation }) => {
         </View>
     );
 };
-
 
 export default TeamCheckin;

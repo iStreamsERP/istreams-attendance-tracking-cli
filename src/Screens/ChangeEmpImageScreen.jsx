@@ -47,6 +47,7 @@ const ChangeEmpImageScreen = () => {
         setEmpName,
         setDesignation,
         userData.userEmail,
+        userData.userDomain,
         setErrorMessage,
         setAvatar
       );
@@ -123,7 +124,7 @@ const ChangeEmpImageScreen = () => {
     >
       <View style={globalStyles.flex_1}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          <View style={globalStyles.centerRoundImgContainer}>
+          <View style={globalStyles.justalignCenter}>
             <View style={globalStyles.centerRoundImg}>
               <Image
                 source={

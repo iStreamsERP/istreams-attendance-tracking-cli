@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
-import Video, { VideoRef } from 'react-native-video';
+import Video from 'react-native-video';
 import { GlobalStyles } from '../Styles/styles';
 import { TextInput, Button, Checkbox } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,6 @@ import { CommonActions } from '@react-navigation/native';
 import { useAuth } from '../Context/AuthContext';
 import { requestNotificationPermission, displayLocalNotification } from '../Utils/notificationUtils';
 import { useTheme } from '../Context/ThemeContext';
-import { colors } from '../Styles/colors';
 
 const { width, height } = Dimensions.get('window');
 

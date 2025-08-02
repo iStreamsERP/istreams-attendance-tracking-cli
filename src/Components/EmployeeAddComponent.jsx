@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, Image, KeyboardAvoidingView, ScrollView, Platform, Alert
+import { View, Text, Image, KeyboardAvoidingView, ScrollView, Platform, Alert
 } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import ImageEditPopUp from '../Modal/ImageEditPopUp';
@@ -55,6 +54,7 @@ const EmployeeAddComponent = ({ employee }) => {
         setEmpName,
         setDesignation,
         userData.userEmail,
+        userData.userDomain,
         setErrorMessage,
         setAvatar
       );
@@ -140,7 +140,7 @@ const EmployeeAddComponent = ({ employee }) => {
     >
       <View style={globalStyles.flex_1}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <View style={globalStyles.centerRoundImgContainer}>
+          <View style={globalStyles.justalignCenter}>
             <View style={globalStyles.centerRoundImg}>
               <Image
                 source={
@@ -249,7 +249,7 @@ const EmployeeAddComponent = ({ employee }) => {
             theme={{
               colors: {
                 primary: colors.primary,
-                disabled: colors.lightGray, // <- set your desired disabled color
+                disabled: colors.lightGray, 
               },
             }}
             disabled={btnloading}

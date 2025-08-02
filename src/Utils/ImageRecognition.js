@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const ImageRecognition = async (
     capturedImage,
     userEmail,
+    userDomain,
     userName,
     deviceId,
     clientURL,
@@ -70,11 +71,10 @@ export const ImageRecognition = async (
 
         const fetchAndDisplayImages = async () => {
             try {
-                const domainPart = Username.split('@')[1].split('.')[0];
                 setErrorMessage(null);
 
                 const response = await fetch(
-                    `http://103.168.19.35:8070/api/View/get-folder-images/${domainPart}/${DEVICE_ID}/${refNo}`
+                    `http://103.168.19.35:8070/api/View/get-folder-images/${userDomain}/${DEVICE_ID}/${refNo}`
                 );
 
                 const text = await response.text();

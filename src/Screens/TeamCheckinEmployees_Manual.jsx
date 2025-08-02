@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Text, View, StyleSheet, FlatList, Alert, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, View, FlatList, Alert, Image } from 'react-native';
 import { Button } from 'react-native-paper';
 import Header from '../Components/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -12,8 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import RNFS from 'react-native-fs';
 import { useTheme } from '../Context/ThemeContext';
-
-const { width, height } = Dimensions.get('window');
 
 const TeamCheckinEmployees_Manual = () => {
     const navigation = useNavigation();
@@ -48,7 +46,6 @@ const TeamCheckinEmployees_Manual = () => {
                 let empImage = null;
 
                 try {
-                    // Call SOAP API for employee image
                     empImage = await callSoapService(userData.clientURL, 'getpic_bytearray', {
                         EmpNo: emp.EMP_NO,
                     });
@@ -100,7 +97,6 @@ const TeamCheckinEmployees_Manual = () => {
             .filter(emp => emp.EMP_NO) // filter null or undefined
             .map(emp => emp.EMP_NO);
 
-        // 4. Convert to required XML string for API
         const empDataXml = selectedEmpNos.map(empNo => `<string>${empNo}</string>`).join('');
 
         const empData = empDataXml;
@@ -152,7 +148,7 @@ const TeamCheckinEmployees_Manual = () => {
             </View>
 
             <View>
-                <View style={styles.imageContainer}>
+                <View>
                     <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                     {capturedImage ? (
                         <Image
@@ -160,8 +156,8 @@ const TeamCheckinEmployees_Manual = () => {
                             style={globalStyles.uploadedEmpImage}
                         />
                     ) : (
-                        <View style={[globalStyles.empImageDisplay, styles.placeholderContainer]}>
-                            <Text style={styles.placeholderText}>No Image</Text>
+                        <View style={[globalStyles.empImageDisplay]}>
+                            <Text style={globalStyles.subtitle_2}>No Image</Text>
                         </View>
                     )}
                 </View>
@@ -206,7 +202,7 @@ const TeamCheckinEmployees_Manual = () => {
                     theme={{
                         colors: {
                             primary: colors.primary,
-                            disabled: colors.lightGray, // <- set your desired disabled color
+                            disabled: colors.lightGray,
                         },
                     }}
                     disabled={btnloading}
@@ -217,9 +213,5 @@ const TeamCheckinEmployees_Manual = () => {
         </View>
     )
 }
-
-const styles = StyleSheet.create({
-
-});
 
 export default TeamCheckinEmployees_Manual;

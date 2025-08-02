@@ -646,11 +646,11 @@ const AutoImageCaptureModal = ({ visible, onClose, onCapture, navigation, return
             
             // Orientation-aware rotation handling
             let rotationAngle = 0;
-            if (deviceType === 'tablet') {
-                rotationAngle = isLandscape ? 0 : 0; // Adjust based on your camera setup
-            } else {
-                rotationAngle = isLandscape ? 0 : 270; // Adjust based on your camera setup
-            }
+            // if (deviceType === 'tablet') {
+            //     rotationAngle = isLandscape ? 0 : 0; // Adjust based on your camera setup
+            // } else {
+            //     rotationAngle = isLandscape ? 0 : 270; // Adjust based on your camera setup
+            // }
             
             const compressedUri = await compressImage(imageUri, rotationAngle);
 

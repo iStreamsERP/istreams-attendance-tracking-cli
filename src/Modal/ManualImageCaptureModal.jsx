@@ -15,8 +15,6 @@ import {
     useCameraDevices,
     useCameraPermission,
 } from "react-native-vision-camera";
-import { compressImage } from "../Utils/UriToBase64Utils";
-import RNFS from 'react-native-fs';
 import { GlobalStyles } from "../Styles/styles";
 import { useTheme } from "../Context/ThemeContext";
 import LottieView from "lottie-react-native";
@@ -54,7 +52,7 @@ const ManualImageCaptureModal = ({ visible, onClose, onCapture }) => {
             const photo = await cameraRef.current.takePhoto({
                 qualityPrioritization: 'balanced',
                 flash: 'off',
-                skipMetadata: true,
+                skipMetadata: false,
             });
 
             const originalUri = `file://${photo.path}`;

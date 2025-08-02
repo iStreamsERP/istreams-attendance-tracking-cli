@@ -107,7 +107,7 @@ const HomeScreen1 = () => {
         {
             image: require('../../assets/modules/emp_management.jpg'),
             title: 'Employee Management',
-            subtitle: '(Add, Update, Delete)',
+            subtitle: '(Add, Update, Reports)',
             submodules: [
                 {
                     image: require('../../assets/modules/add_emp.jpg'),
@@ -118,6 +118,11 @@ const HomeScreen1 = () => {
                     image: require('../../assets/modules/update_emp.jpg'),
                     title: 'Update Employee Image',
                     onPress: handleChangeEmpImage,
+                },
+                {
+                    image: require('../../assets/modules/reports.jpg'),
+                    title: 'Reports',
+                    onPress: () => navigation.navigate('SwitchReportScreen'),
                 },
             ],
         },
@@ -183,7 +188,7 @@ const HomeScreen1 = () => {
     return (
         <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             {/* === Top Bar === */}
-            <View style={styles.row1Container}>
+            <View style={[globalStyles.twoInputContainer1, globalStyles.my_5]}>
                 <Image source={require('../../assets/logo_edited.png')} style={styles.logo} />
                 <View style={[styles.iconRowContainer, { color: colors.card }]}>
                     <TouchableOpacity style={styles.titleContainer} onPress={handlePopupCLick}>
@@ -191,10 +196,10 @@ const HomeScreen1 = () => {
                             {userData.companyName}
                         </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('NotificationListScreen')} style={[globalStyles.iconContainer, { backgroundColor: colors.background }]}>
+                    <TouchableOpacity onPress={() => navigation.navigate('NotificationListScreen')} style={[globalStyles.headerImage, globalStyles.justalignCenter, { backgroundColor: colors.background }]}>
                         <Icon name='bell' size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('ChatScreen')} style={[globalStyles.iconContainer, { backgroundColor: colors.background }]}>
+                    <TouchableOpacity onPress={() => navigation.navigate('ChatScreen')} style={[globalStyles.headerImage, globalStyles.justalignCenter, { backgroundColor: colors.background }]}>
                         <AntDesign name='message1' size={24} color={colors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleDPImageCLick}>
@@ -204,7 +209,7 @@ const HomeScreen1 = () => {
                                     ? { uri: avatarUri }
                                     : require("../../assets/images.png") // fallback image path
                             }
-                            style={globalStyles.iconContainer}
+                            style={globalStyles.headerImage}
                         />
                     </TouchableOpacity>
                 </View>
@@ -221,7 +226,7 @@ const HomeScreen1 = () => {
                         Account Details
                     </Text>
 
-                    <Button style={styles.btnlogout} onPress={handleLogout} theme={{ colors: { primary: 'white' } }}>
+                    <Button style={{ backgroundColor: colors.error}} onPress={handleLogout} theme={{ colors: { primary: 'white' } }}>
                         Logout
                     </Button>
                 </View>
@@ -230,7 +235,7 @@ const HomeScreen1 = () => {
             <HomeHeader user={{ name: userData.userName, avatar: avatarUri }} />
 
             {/* === Modules & Submodules === */}
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[globalStyles.justalignCenter, globalStyles.my_5]} showsVerticalScrollIndicator={false}>
                 {!selectedModule ? (
                     modules.map((m, index) => (
                         <ModuleCard key={index} {...m} onPress={() => handleModuleClick(m)} />
@@ -253,19 +258,12 @@ const HomeScreen1 = () => {
 export default HomeScreen1;
 
 const styles = StyleSheet.create({
-    row1Container: {
-        marginVertical: 5,
-        flexDirection: 'row',
-        alignItems: "center",
-        justifyContent: 'space-between'
-    },
     titleContainer: {
         borderColor: colors.gray,
         borderWidth: 1,
         borderRadius: 10,
         height: 45,
         justifyContent: 'center',
-        // Dynamically adjust width based on screen width
         width: width > 768 ? 180 : 95  // Tablet vs Mobile
     },
     iconRowContainer: {
@@ -277,11 +275,6 @@ const styles = StyleSheet.create({
         width: width > 768 ? 150 : 110,
         resizeMode: 'contain',
         height: width > 768 ? 80 : 60,
-    },
-    container: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 5
     },
     popup: {
         position: 'absolute',
@@ -295,8 +288,5 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 5,
         zIndex: 10,
-    },
-    btnlogout: {
-        backgroundColor: 'red',
     },
 });

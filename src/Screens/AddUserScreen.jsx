@@ -66,32 +66,46 @@ const AddUserScreen = () => {
                 const batch = filteredUsers.slice(i, i + batchSize);
 
                 const batchProcessed = await Promise.all(
-                    batch.map(async (user) => {
+                    batch.map(async (user, batchIndex) => {
                         let avatarData = null;
                         
+                        // Create unique cache key using both user_name and emp_no for better accuracy
+                        const cacheKey = `${user.user_name}_${user.emp_no || 'no_emp'}`;
+                        
                         // Check cache first
-                        if (imageCache.has(user.user_name)) {
-                            avatarData = imageCache.get(user.user_name);
-                        } else if (user.emp_no) {
+                        if (imageCache.has(cacheKey)) {
+                            avatarData = imageCache.get(cacheKey);
+                        } else if (user.emp_no && user.emp_no.toString().trim() !== '') {
                             try {
+                                console.log(`Fetching image for user: ${user.user_name}, emp_no: ${user.emp_no}`);
+                                
                                 const img = await callSoapService(
                                     userData.clientURL,
                                     'getpic_bytearray',
-                                    { EmpNo: user.emp_no }
+                                    { EmpNo: user.emp_no.toString() } // Ensure emp_no is string
                                 );
-                                avatarData = img;
                                 
-                                // Update cache
-                                setImageCache(prev => new Map(prev.set(user.user_name, img)));
+                                // Validate image data before caching
+                                if (img && typeof img === 'string' && img.length > 0) {
+                                    avatarData = img;
+                                    
+                                    // Update cache with unique key
+                                    setImageCache(prev => new Map(prev.set(cacheKey, img)));
+                                } else {
+                                    console.warn(`Invalid image data for ${user.user_name}`);
+                                }
                             } catch (e) {
-                                console.warn(`Image fetch failed for ${user.user_name}:`, e);
+                                console.warn(`Image fetch failed for ${user.user_name} (emp_no: ${user.emp_no}):`, e);
                             }
+                        } else {
+                            console.log(`No emp_no for user: ${user.user_name}`);
                         }
                         
                         return { 
                             ...user, 
                             avatar: avatarData,
-                            id: user.user_name || `user_${i}` // Ensure unique ID
+                            id: `${user.user_name}_${user.emp_no || i + batchIndex}`, // More unique ID
+                            cacheKey: cacheKey // Store cache key for debugging
                         };
                     })
                 );
@@ -114,12 +128,23 @@ const AddUserScreen = () => {
     };
 
     const processImageData = useCallback((avatarData) => {
-        if (!avatarData) return null;
+        if (!avatarData || typeof avatarData !== 'string') return null;
+        
+        // If already a data URL, return as is
         if (avatarData.startsWith('data:image')) return avatarData;
         
         try {
-            const cleanedData = avatarData.replace(/(\r\n|\n|\r)/gm, "");
-            return `data:image/bmp;base64,${cleanedData}`;
+            // Clean the base64 data
+            const cleanedData = avatarData.replace(/(\r\n|\n|\r|\s)/gm, "");
+            
+            // Validate base64 format
+            if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleanedData)) {
+                console.warn('Invalid base64 format');
+                return null;
+            }
+            
+            // Try different image formats (bmp is common but jpg/png might work better)
+            return `data:image/jpeg;base64,${cleanedData}`;
         } catch (e) {
             console.warn('Image processing failed:', e);
             return null;
@@ -153,17 +178,30 @@ const AddUserScreen = () => {
     }, [navigation]);
 
     const handleRefresh = useCallback(() => {
+        // Clear image cache on refresh to force re-fetch
+        setImageCache(new Map());
         getData();
     }, []);
 
-    // Avatar component with error handling
+    // Avatar component with improved error handling
     const AvatarComponent = React.memo(({ user, style }) => {
         const [imageError, setImageError] = useState(false);
         const [imageLoading, setImageLoading] = useState(true);
 
         const processedUri = useMemo(() => {
-            return user.avatar ? processImageData(user.avatar) : null;
-        }, [user.avatar, processImageData]);
+            if (!user.avatar) return null;
+            const processed = processImageData(user.avatar);
+            if (!processed) {
+                console.warn(`Failed to process image for ${user.user_name}`);
+            }
+            return processed;
+        }, [user.avatar, user.user_name, processImageData]);
+
+        // Reset error state when avatar data changes
+        useEffect(() => {
+            setImageError(false);
+            setImageLoading(true);
+        }, [user.avatar]);
 
         if (processedUri && !imageError) {
             return (
@@ -176,19 +214,33 @@ const AddUserScreen = () => {
                     <Image
                         source={{ uri: processedUri }}
                         style={style}
-                        onLoad={() => setImageLoading(false)}
-                        onError={() => {
+                        onLoad={() => {
+                            setImageLoading(false);
+                            console.log(`Image loaded successfully for ${user.user_name}`);
+                        }}
+                        onError={(error) => {
+                            console.warn(`Image load error for ${user.user_name}:`, error.nativeEvent);
                             setImageError(true);
                             setImageLoading(false);
                         }}
+                        resizeMode="cover"
                     />
                 </View>
             );
         }
 
-        const initials = user.user_name
-            ? user.user_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-            : '?';
+        // Fallback avatar with better initials logic
+        const getInitials = (name) => {
+            if (!name) return '?';
+            
+            const words = name.trim().split(/\s+/);
+            if (words.length === 1) {
+                return words[0].substring(0, 2).toUpperCase();
+            }
+            return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+        };
+
+        const initials = getInitials(user.user_name || user.emp_name);
 
         return (
             <View style={[style, styles.avatarFallback]}>
@@ -197,7 +249,7 @@ const AddUserScreen = () => {
         );
     });
 
-    // User item component
+    // User item component with debug info
     const UserItem = React.memo(({ item, onPress }) => (
         <TouchableOpacity
             style={[
@@ -218,6 +270,11 @@ const AddUserScreen = () => {
                         {item.emp_name}
                     </Text>
                 )}
+                {__DEV__ && (
+                    <Text style={[globalStyles.content, { fontSize: 10, color: '#999' }]} numberOfLines={1}>
+                        email: {item.email_address || 'N/A'} 
+                    </Text>
+                )}
             </View>
         </TouchableOpacity>
     ));
@@ -229,8 +286,8 @@ const AddUserScreen = () => {
     const keyExtractor = useCallback((item) => item.id, []);
 
     const getItemLayout = useCallback((data, index) => ({
-        length: 70,
-        offset: 70 * index,
+        length: __DEV__ ? 80 : 70, // Slightly taller in dev mode for debug info
+        offset: (__DEV__ ? 80 : 70) * index,
         index,
     }), []);
 
@@ -311,7 +368,7 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         color: '#475569',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
     },
     itemContainer: {
@@ -335,6 +392,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1,
+        backgroundColor: 'rgba(255,255,255,0.8)',
     },
     errorContainer: {
         flex: 1,

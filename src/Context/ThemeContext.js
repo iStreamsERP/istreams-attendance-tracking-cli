@@ -38,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
             loginBackground: "rgba(255, 255, 255, 0.85)",
             surface: '#ffffff',
             text: '#000000',
-            card: '#ffffff',
+            card: '#e6e6e6',
             border: '#e2e8f0',
             white: '#ffffff',
             gray: '#64748b',

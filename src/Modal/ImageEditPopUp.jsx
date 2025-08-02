@@ -66,14 +66,11 @@ const ImageEditPopUp = ({ setAvatar, empNo }) => {
             setAvatar(null);
             await AsyncStorage.removeItem('profilePicture');
 
-            const Username = userData.userEmail;
-            const domainPart = Username.split('@')[1].split('.')[0];
-
             const response = await axios.delete(
                 `http://103.168.19.35:8070/api/EncodeImgToNpy/delete`,
                 {
                     params: {
-                        DomainName: domainPart,
+                        DomainName: userData.userDomain,
                         EmpNo: empNo,
                     },
                     headers: {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Text, StyleSheet, View, ScrollView } from 'react-native';
+import { Text, View, ScrollView } from 'react-native';
 import Header from '../Components/Header';
 import { GlobalStyles } from '../Styles/styles';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
@@ -252,9 +252,5 @@ const ShopfloorTracking = () => {
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-
-})
 
 export default ShopfloorTracking;

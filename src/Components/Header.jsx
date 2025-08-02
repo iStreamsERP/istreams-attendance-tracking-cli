@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
+import { Text, View, Image, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -18,16 +18,16 @@ const Header = ({ title = "Header", style }) => {
     );
 
     return (
-        <View style={[styles.container, style]}>
+        <View style={[globalStyles.twoInputContainer1, globalStyles.pt_10, style]}>
             <TouchableOpacity
                 onPress={() => navigation.navigate("Home1")}
-                style={styles.touchableArea}
+                style={[globalStyles.justalignCenter, globalStyles.p_10]}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
                 <Ionicons name="arrow-back" color={colors.text} size={24} />
             </TouchableOpacity>
 
-            <View style={styles.titleContainer}>
+            <View style={[globalStyles.flex_1, globalStyles.justalignCenter, globalStyles.px_10]}>
                 <Text style={[globalStyles.title, { textAlign: 'center' }]} numberOfLines={2}>
                     {title}
                 </Text>
@@ -39,35 +39,10 @@ const Header = ({ title = "Header", style }) => {
                         ? { uri: imageUri }
                         : require("../../assets/images.png") // fallback image path
                 }
-                style={styles.dp}
+                style={globalStyles.headerImage}
             />
         </View>
     );
 };
 
 export default Header;
-
-const styles = StyleSheet.create({
-    container: {
-        paddingTop: 10,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center"
-    },
-    touchableArea: {
-        padding: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    titleContainer: {
-        flex: 1,
-        paddingHorizontal: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    dp: {
-        height: 44,
-        width: 44,
-        borderRadius: 22,
-    },
-});

@@ -22,6 +22,7 @@ const defaultUserData = {
   companyCurrSymbol: null,
   companyCurrIsIndianStandard: false,
   androidID: '',
+  userDomain: '',
 };
 
 export const AuthProvider = ({ children }) => {

@@ -304,7 +304,7 @@ const LocationRadiusDetector = ({
         return (
             <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
                 <Header title="Location Radius Detector" />
-                <View style={styles.loadingContainer}>
+                <View style={[globalStyles.flex_1, globalStyles.justalignCenter, globalStyles.p_20]}>
                     <ActivityIndicator size="large" color="#007AFF" />
                     <Text style={globalStyles.subtitle_1}>Checking your location...</Text>
                     {selectedLocation && (
@@ -484,7 +484,7 @@ const LocationRadiusDetector = ({
                         Proceed to Attendance
                     </Button>
                 ) : (
-                    <View style={[styles.actionButtons, globalStyles.bottomButtonContainer, { columnGap: 10 }]}>
+                    <View style={[globalStyles.twoInputContainer, globalStyles.mt_10, globalStyles.bottomButtonContainer, { columnGap: 10 }]}>
                         <Button
                             mode="contained"
                             onPress={() => checkLocationDistance()}
@@ -527,12 +527,6 @@ const LocationRadiusDetector = ({
 };
 
 const styles = StyleSheet.create({
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
     dropdown: {
         maxHeight: 430,
         borderColor: colors.gray,
@@ -559,11 +553,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffeaea',
         borderColor: '#f44336',
     },
-    actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 10,
-    }
 });
 
 export default LocationRadiusDetector;

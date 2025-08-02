@@ -56,11 +56,10 @@ export const handleEmpImageView = async (
     setEmpName,
     setDesignation,
     userEmail,
+    userDomain,
     setErrorMessage,
     setAvatar
 ) => {
-
-    const domainPart = userEmail.split('@')[1].split('.')[0];
     const empNoforImg = employee.EMP_NO;
 
     setEmpNo(employee.EMP_NO);
@@ -72,7 +71,7 @@ export const handleEmpImageView = async (
             `http://103.168.19.35:8070/api/EncodeImgToNpy/view`,
             {
                 params: {
-                    DomainName: domainPart,
+                    DomainName: userDomain,
                     EmpNo: empNoforImg,
                 },
                 headers: {

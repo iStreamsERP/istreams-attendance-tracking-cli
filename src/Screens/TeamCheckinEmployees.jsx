@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Text, View, StyleSheet, FlatList, Alert, Image, Dimensions } from 'react-native';
+import { Text, View, FlatList, Alert, Image } from 'react-native';
 import { Button } from 'react-native-paper';
 import Header from '../Components/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -12,8 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { convertUriToBase64 } from '../Utils/UriToBase64Utils';
 import RNFS from 'react-native-fs';
 import { useTheme } from '../Context/ThemeContext';
-
-const { width, height } = Dimensions.get('window');
 
 const TeamCheckinEmployees = () => {
     const navigation = useNavigation();
@@ -45,11 +43,13 @@ const TeamCheckinEmployees = () => {
     const clientURL = userData.clientURL;
     const companyCode = userData.companyCode;
     const branchCode = userData.branchCode;
+    const userDomain = userData.userDomain;
 
     const handleImageRecognition = async () => {
         await ImageRecognition(
             capturedImage,
             userEmail,
+            userDomain,
             userName,
             deviceId,
             clientURL,
@@ -155,22 +155,22 @@ const TeamCheckinEmployees = () => {
         <View style={[globalStyles.pageContainer, { paddingTop: insets.top }]}>
             <Header title="Add Check-in Employees" />
 
-            <View style={[styles.projectContainer, { backgroundColor: colors.card }]}>
+            <View style={[globalStyles.p_10, globalStyles.borderRadius_15, globalStyles.mb_10, { backgroundColor: colors.card }]}>
                 <Text style={[globalStyles.subtitle_2, { color: '#0685de' }]}> {projectNo}</Text>
                 <Text style={globalStyles.subtitle}> {projectName}</Text>
             </View>
 
             <View style={[globalStyles.camButtonContainer, globalStyles.twoInputContainer, { marginTop: 0, alignItems: 'center' }]}>
-                <View style={styles.imageContainer}>
+                <View>
                     <Text style={globalStyles.subtitle_1}>Uploaded Image</Text>
                     {capturedImage ? (
                         <Image
                             source={{ uri: capturedImage }}
-                            style={styles.empImageDisplay}
+                            style={globalStyles.empImageDisplay}
                         />
                     ) : (
-                        <View style={[globalStyles.empImageDisplay, styles.placeholderContainer]}>
-                            <Text style={styles.placeholderText}>No Image</Text>
+                        <View style={[globalStyles.empImageDisplay]}>
+                            <Text style={globalStyles.subtitle_2}>No Image</Text>
                         </View>
                     )}
                 </View>
@@ -181,7 +181,7 @@ const TeamCheckinEmployees = () => {
                     theme={{
                         colors: {
                             primary: colors.primary,
-                            disabled: colors.lightGray, // <- set your desired disabled color
+                            disabled: colors.lightGray,
                         },
                     }}
                     title="Reload Page"
@@ -211,20 +211,5 @@ const TeamCheckinEmployees = () => {
         </View>
     )
 }
-
-const styles = StyleSheet.create({
-    projectContainer: {
-        borderRadius: 15,
-        padding: 10,
-        marginVertical: 10,
-    },
-    empImageDisplay: {
-        width: width * 0.20,
-        height: width * 0.20,
-        borderRadius: (width * 0.20) / 2,
-        borderWidth: 2,
-        borderColor: '#ddd',
-    },
-});
 
 export default TeamCheckinEmployees;

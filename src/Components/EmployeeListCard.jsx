@@ -16,7 +16,7 @@ const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
     const colors = theme.colors;
     const globalStyles = GlobalStyles(colors);
     return (
-        <View style={styles.employeeListContainer}>
+        <View style={globalStyles.flex_1}>
             {loading ? (
                 <View style={styles.loaderContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -39,14 +39,14 @@ const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
                                                     ? item.EMP_IMAGE
                                                     : `data:image/png;base64,${item.EMP_IMAGE.replace(/(\r\n|\n|\r)/gm, "")}`
                                             }
-                                            : require('../../assets/human.png')
+                                            : require('../../assets/images.png')
                                     }
-                                    style={styles.empImage}
+                                    style={globalStyles.empImageInList}
                                 />
                                 <View style={styles.innerContainer}>
                                     <Text style={[globalStyles.subtitle_3, { color: colors.primary }]}>{item.EMP_NO}</Text>
                                     <Text style={globalStyles.subtitle_3}>{item.EMP_NAME}</Text>
-                                    <Text style={globalStyles.subtitle_4}>{item.DESIGNATION}</Text>
+                                    <Text style={globalStyles.small_text}>{item.DESIGNATION}</Text>
                                 </View>
                             </TouchableOpacity>
                         )}
@@ -60,20 +60,11 @@ const EmployeeListCard = ({ loading, selectedEmp, onPress }) => {
 export default EmployeeListCard;
 
 const styles = StyleSheet.create({
-    employeeListContainer: {
-        flex: 1,
-    },
     loaderContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 20,
-    },
-    empImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 10,
-        marginRight: 10,
     },
     container: {
         flexDirection: 'row',

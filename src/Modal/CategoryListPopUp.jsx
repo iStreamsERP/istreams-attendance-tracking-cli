@@ -71,7 +71,7 @@ const CategoryListPopUp = ({ onSelect, selectedCategory, leaveType }) => {
                                 textStyle={[
                                     globalStyles.subtitle_3,
                                     selectedValue === item.LEAVE_CATEGORY
-                                        ? { color: colors.text }
+                                        ? { color: colors.background }
                                         : { color: colors.text }
                                 ]}
                                 selectedColor={colors.text}
@@ -96,8 +96,8 @@ const styles = StyleSheet.create({
     chipContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingVertical: 10,
-        gap: 8,
+        paddingVertical: 5,
+        gap: 5,
     },
 });
 

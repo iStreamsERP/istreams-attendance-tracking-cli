@@ -4,7 +4,6 @@ import {
     Text,
     SectionList,
     ActivityIndicator,
-    StyleSheet
 } from 'react-native';
 import EmployeeListCard from './EmployeeListCard';
 import { useNavigation } from '@react-navigation/native';
@@ -22,9 +21,9 @@ const ImageRecognitionResult = ({ recogloading, groupedData }) => {
     };
 
     return (
-        <View style={styles.employeeListContainer}>
+        <View>
             {recogloading ? (
-                <View style={styles.loaderContainer}>
+                <View style={[globalStyles.justalignCenter, globalStyles.mt_10]}>
                     <Text
                         style={[globalStyles.subtitle_4, { color: colors.primary }]}
                     >
@@ -37,6 +36,7 @@ const ImageRecognitionResult = ({ recogloading, groupedData }) => {
             ) : (
                 <SectionList
                     sections={groupedData}
+                    nestedScrollEnabled
                     keyExtractor={(item, index) => item.EMP_NO + index}
                     renderSectionHeader={({ section: { title } }) => (
                         <Text style={[globalStyles.subtitle_1, { marginVertical: 10 }]}>
@@ -57,11 +57,3 @@ const ImageRecognitionResult = ({ recogloading, groupedData }) => {
 };
 
 export default ImageRecognitionResult;
-
-const styles = StyleSheet.create({
-    loaderContainer: {
-        marginTop: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-});

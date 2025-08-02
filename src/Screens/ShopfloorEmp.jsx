@@ -36,7 +36,6 @@ const ShopfloorEmp = () => {
                 let empImage = null;
 
                 try {
-                    // Call SOAP API for employee image
                     empImage = await callSoapService(userData.clientURL, 'getpic_bytearray', {
                         EmpNo: emp.EMP_NO,
                     });
@@ -59,17 +58,6 @@ const ShopfloorEmp = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const transformEmpData = (empNoList) => {
-        return empNoList.join(',,|') + ',,|';
-    };
-
-    const strEmpList = () => {
-        const empNoList = selectedEmp.map(emp => emp.EMP_NO);
-        const transformedEmpNo1 = transformEmpData(empNoList);
-        setTransformedEmpNo(transformedEmpNo1);
-        console.log(transformedEmpNo);
     };
 
     const SaveShopfloor = async () => {
@@ -148,7 +136,7 @@ const ShopfloorEmp = () => {
                 </Button>
             </View>
 
-            <View style={{ flex: 1, marginVertical: 10 }}>
+            <View style={[globalStyles.flex_1, globalStyles.my_10]}>
                 <EmployeeListCard
                     loading={loading}
                     selectedEmp={selectedEmp}
@@ -162,7 +150,7 @@ const ShopfloorEmp = () => {
                     theme={{
                         colors: {
                             primary: colors.primary,
-                            disabled: colors.lightGray, // <- set your desired disabled color
+                            disabled: colors.lightGray, 
                         },
                     }}
                     disabled={btnloading}
@@ -173,15 +161,5 @@ const ShopfloorEmp = () => {
         </View>
     );
 }
-
-
-const styles = StyleSheet.create({
-    projectContainer: {
-        backgroundColor: '#d7dff7',
-        borderRadius: 15,
-        padding: 10,
-        marginVertical: 10,
-    },
-});
 
 export default ShopfloorEmp;

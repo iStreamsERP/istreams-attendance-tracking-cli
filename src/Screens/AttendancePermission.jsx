@@ -1,16 +1,15 @@
-import { Dimensions, Image, ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { Image, ScrollView, View, TouchableOpacity, Alert } from 'react-native';
+import React, { use, useEffect, useState } from 'react';
 import { Text, TextInput, Button, Card, Checkbox } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Header from '../Components/Header';
-const { width } = Dimensions.get('window');
 import { GlobalStyles } from '../Styles/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
 import { convertDataModelToStringData } from '../Utils/dataModelConverter';
 import { useAuth } from '../Context/AuthContext';
 import { useTheme } from '../Context/ThemeContext';
-import { formatTime, formatDate } from '../Utils/dataTimeUtils';
+import { formatTime, formatDate, formatSqlDateTime } from '../Utils/dataTimeUtils';
 
 const AttendancePermission = ({ employee }) => {
     const insets = useSafeAreaInsets();
@@ -29,8 +28,8 @@ const AttendancePermission = ({ employee }) => {
     const [entryDateObj, setEntryDateObj] = useState(new Date());
     const [showStartTimePicker, setShowStartTimePicker] = useState(false);
     const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-    const [startTimeObj, setStartTimeObj] = useState(new Date());
-    const [endTimeObj, setEndTimeObj] = useState(new Date());
+    const [startTimeObj, setStartTimeObj] = useState(new Date(entryDateObj));
+    const [endTimeObj, setEndTimeObj] = useState(new Date(entryDateObj));
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
     const [totalHours, setTotalHours] = useState('');
@@ -76,30 +75,41 @@ const AttendancePermission = ({ employee }) => {
             setEntryDateObj(selectedDate);
             setEntryDate(formatDate(selectedDate));
 
-            // Clear times and total hours
+            // Reset start and end times to entry date but without calling formatTime yet
             setStartTime('');
             setEndTime('');
             setTotalDays('');
-            setStartTimeObj(new Date());
-            setEndTimeObj(new Date());
+            setStartTimeObj(new Date(selectedDate)); // Always a valid date
+            setEndTimeObj(new Date(selectedDate));   // Always a valid date
         }
     };
 
     const onStartTimeChange = (event, selectedTime) => {
         setShowStartTimePicker(false);
         if (selectedTime) {
-            setStartTimeObj(selectedTime);
-            setStartTime(formatTime(selectedTime));
-            calculateHours(selectedTime, endTimeObj);
+            const updatedStartTime = new Date(entryDateObj);
+            updatedStartTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+
+            setStartTimeObj(updatedStartTime);
+            setStartTime(formatTime(updatedStartTime));
+            calculateHours(updatedStartTime, endTimeObj);
         }
     };
 
     const onEndTimeChange = (event, selectedTime) => {
         setShowEndTimePicker(false);
         if (selectedTime) {
-            setEndTimeObj(selectedTime);
-            setEndTime(formatTime(selectedTime));
-            calculateHours(startTimeObj, selectedTime);
+            const updatedEndTime = new Date(entryDateObj);
+            updatedEndTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+
+            if (startTimeObj && updatedEndTime < startTimeObj) {
+                Alert.alert('Invalid Time', 'End time cannot be before start time.');
+                return;
+            }
+
+            setEndTimeObj(updatedEndTime);
+            setEndTime(formatTime(updatedEndTime));
+            calculateHours(startTimeObj, updatedEndTime);
         }
     };
 
@@ -113,38 +123,50 @@ const AttendancePermission = ({ employee }) => {
 
 
     const handleSubmit = async () => {
-        if (!leaveType) {
-            alert('Please select leave type');
+        if (!entryDate) {
+            alert('Select entry date');
             return;
         }
-        if (!startDate || !endDate) {
-            alert('Please select start and end dates');
+        if (!startTime || !endTime) {
+            alert('Please select start and end time');
             return;
         }
-        if (!remarks) {
-            alert('Please enter remarks');
+        if (totalHours <= 0) {
+            Alert.alert("Invalid Time", "Start time and end time should be different.");
+            return;
+        }
+        if (!reason) {
+            alert('Please enter reason');
             return;
         }
 
         setBtnLoading(true);
 
         try {
-            const leaveData = {
-                LEAVE_TYPE: leaveType,
-                LEAVE_CATEGORY: category || 'General', // Default category if none selected
-                START_DATE: formatDateForAPI(startDateObj),
-                END_DATE: formatDateForAPI(endDateObj),
-                NO_OF_DAYS: totalDays,
-                EMP_REMARKS: remarks,
-                EMP_NO: empData.empNo, // Make sure to include employee number
+            const startTimeSql = formatSqlDateTime(startTimeObj);
+            const endTimeSql = formatSqlDateTime(endTimeObj);
+
+            const latePermissionData = {
+                COMPANY_CODE: userData.companyCode,
+                BRANCH_CODE: userData.branchCode,
+                EMP_NO: empData.empNo,
+                TRANS_DATE: entryDate,
+                TIME_FROM: startTimeSql,
+                TIME_TO: endTimeSql,
+                TOTAL_HRS: totalHours,
+                PAYABLE: 'F',
+                REASON: reason,
+                COST_IN_PAYROLL: ' ',
+                LOP_SALARY_PAYROLL: ' ',
+                IS_AUTOENTRY: 'F',
             };
 
             const convertedDataModel = convertDataModelToStringData(
-                "leave_request",
-                leaveData
+                "attendance_permission_details",
+                latePermissionData
             );
 
-            const leaveRequest_Parameter = {
+            const latePermission_Parameter = {
                 UserName: userData.userName,
                 DModelData: convertedDataModel,
             };
@@ -152,21 +174,17 @@ const AttendancePermission = ({ employee }) => {
             const response = await callSoapService(
                 userData.clientURL,
                 "DataModel_SaveData",
-                leaveRequest_Parameter
+                latePermission_Parameter
             );
 
-            if (response) {
-                alert('Leave request submitted successfully');
+            if (response === "") {
+                Alert.alert('Saved Successfully', 'Leave Permission request submitted successfully');
                 // Reset form
-                setLeaveType('');
-                setCategory('');
-                setStartDate('');
-                setEndDate('');
-                setTotalDays('');
-                setRemarks('');
-                // Reset date objects to current date
-                setStartDateObj(new Date());
-                setEndDateObj(new Date());
+                setEntryDate('');
+                setStartTime('');
+                setEndTime('');
+                setReason('');
+                setTotalHours('');
             }
         } catch (error) {
             console.error('Error saving leave request:', error);
@@ -182,15 +200,14 @@ const AttendancePermission = ({ employee }) => {
             <View style={globalStyles.flex_1}>
 
                 <ScrollView
-                    contentContainerStyle={styles.scrollContainer}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.profileContainer}>
-                        <View style={styles.imageContainer}>
+                    <View style={globalStyles.justalignCenter}>
+                        <View style={globalStyles.centerRoundImg}>
                             <Image
                                 source={{ uri: `data:image/jpeg;base64,${userData.userAvatar}` }}
-                                style={styles.image}
+                                style={globalStyles.roundImg}
                             />
                         </View>
                     </View>
@@ -246,10 +263,10 @@ const AttendancePermission = ({ employee }) => {
                                     value={startTime}
                                     editable={false}
                                     theme={theme}
-                                    style={globalStyles.container1 }
+                                    style={globalStyles.container1}
                                     placeholder="HH:MM"
-                                    right={<TextInput.Icon icon="clock" color={colors.text} onPress={() => entryDate && setShowStartTimePicker(true)} 
-                                    disabled={!entryDate}/>}
+                                    right={<TextInput.Icon icon="clock" color={colors.text} onPress={() => entryDate && setShowStartTimePicker(true)}
+                                        disabled={!entryDate} />}
                                 />
                             </TouchableOpacity>
 
@@ -265,7 +282,7 @@ const AttendancePermission = ({ employee }) => {
                                     style={globalStyles.container1}
                                     placeholder="HH:MM"
                                     right={<TextInput.Icon icon="clock" color={colors.text} onPress={() => startTime && setShowEndTimePicker(true)}
-                                    disabled={!startTime} />}
+                                        disabled={!startTime} />}
                                 />
                             </TouchableOpacity>
                         </View>
@@ -316,9 +333,9 @@ const AttendancePermission = ({ employee }) => {
 
                     {showStartTimePicker && (
                         <DateTimePicker
-                            value={startTimeObj}
+                            value={startTimeObj || entryDateObj} // always pass your entryDate with time
                             mode="time"
-                            is24Hour={true}
+                            is24Hour={false}
                             display="default"
                             onChange={onStartTimeChange}
                         />
@@ -326,9 +343,9 @@ const AttendancePermission = ({ employee }) => {
 
                     {showEndTimePicker && (
                         <DateTimePicker
-                            value={endTimeObj}
+                            value={endTimeObj || entryDateObj}
                             mode="time"
-                            is24Hour={true}
+                            is24Hour={false}
                             display="default"
                             onChange={onEndTimeChange}
                         />
@@ -358,24 +375,3 @@ const AttendancePermission = ({ employee }) => {
 };
 
 export default AttendancePermission;
-
-const styles = StyleSheet.create({
-    profileContainer: {
-        alignSelf: 'center',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    imageContainer: {
-        width: width * 0.30,
-        height: width * 0.30,
-        borderRadius: (width * 0.30) / 2,
-        backgroundColor: '#e0e0e0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    image: {
-        width: '100%',
-        height: '100%',
-        borderRadius: (width * 0.35) / 2,
-    },
-});

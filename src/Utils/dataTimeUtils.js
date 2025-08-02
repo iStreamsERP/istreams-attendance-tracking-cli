@@ -8,12 +8,15 @@ export const formatDate = (date) => {
 };
 
 export const formatTime = (date) => {
+  if (!date || isNaN(date.getTime())) return ''; // <-- Prevent NaN
   let hours = date.getHours();
-  let minutes = String(date.getMinutes()).padStart(2, '0');
+  let minutes = date.getMinutes();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12 || 12;
+  minutes = minutes.toString().padStart(2, '0');
   return `${hours}:${minutes} ${ampm}`;
 };
+
 
 export const formatNormalDate = (normaldate) => {
   const day = String(normaldate.getDate()).padStart(2, '0');
@@ -93,4 +96,17 @@ export const formatSoapTimeOnly = (dateString) => {
     console.error("Error formatting time:", error);
     return "";
   }
+};
+
+export const formatSqlDateTime = (date) => {
+  if (!date || isNaN(date.getTime())) return '';
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${month}/${day}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
 };

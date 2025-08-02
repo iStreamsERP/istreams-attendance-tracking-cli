@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Header from '../Components/Header';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlobalStyles } from '../Styles/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';

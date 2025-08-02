@@ -44,6 +44,11 @@ export const GlobalStyles = (colors = {}) => StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.lightGray,
     },
+    bigtitle: {
+        fontSize: 25,
+        fontFamily: 'Inter-Bold',
+        color: colors.text,
+    },
     title: {
         fontFamily: 'Inter-Bold',
         fontSize: 20,
@@ -195,6 +200,12 @@ export const GlobalStyles = (colors = {}) => StyleSheet.create({
     p_10: {
         padding: 10,
     },
+    p_20: {
+        padding: 20,
+    },
+    pt_10: {
+        paddingTop: 10,
+    },
     py_10: {
         paddingVertical: 10,
     },
@@ -218,6 +229,40 @@ export const GlobalStyles = (colors = {}) => StyleSheet.create({
     },
     px_50: {
         paddingHorizontal: 50,
+    },
+    justalignCenter: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    borderRadius_10: {
+        borderRadius: 10,
+    },
+    borderRadius_15: {
+        borderRadius: 15,
+    },
+    borderRadius_20: {
+        borderRadius: 20,
+    },
+    borderRadius_30: {
+        borderRadius: 30,
+    },
+    borderRadius_40: {
+        borderRadius: 40,
+    },
+    borderRadius_50: {
+        borderRadius: 50,
+    },
+
+    //Emp List
+    empImageInList: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+    },
+    headerImage: {
+        width: 44,
+        height: 44,
+        borderRadius: 25,
     },
 
     // Switch for Email/Phone
@@ -300,16 +345,6 @@ export const GlobalStyles = (colors = {}) => StyleSheet.create({
         color: '#fff',
     },
 
-    // HomeScreen Icon
-    iconContainer: {
-        height: 45,
-        width: 45,
-        borderRadius: 25,
-        backgroundColor: colors.card,
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-
     // Round Uploaded Emp Image
     uploadedEmpImage: {
         width: width * 0.20,
@@ -326,11 +361,6 @@ export const GlobalStyles = (colors = {}) => StyleSheet.create({
     },
 
     // Center Round Img / Container
-    centerRoundImgContainer: {
-        alignSelf: 'center',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     centerRoundImg: {
         width: width * 0.30,
         height: width * 0.30,

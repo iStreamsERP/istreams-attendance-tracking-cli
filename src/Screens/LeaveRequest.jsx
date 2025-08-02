@@ -1,4 +1,4 @@
-import { Dimensions, Image, ScrollView, View, TouchableOpacity } from 'react-native';
+import { Image, ScrollView, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, Button, Card } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -9,8 +9,12 @@ import CategoryListPopUp from '../Modal/CategoryListPopUp';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSoapService } from '../SoapRequestAPI/callSoapService';
 import { convertDataModelToStringData } from '../Utils/dataModelConverter';
+import { formatDate } from '../Utils/dataTimeUtils';
 import { useAuth } from '../Context/AuthContext';
 import { useTheme } from '../Context/ThemeContext';
+import AutoImageCaptureModal from '../Modal/AutoImageCaptureModal';
+import { ImageRecognition } from '../Utils/ImageRecognition';
+import { useNavigation } from '@react-navigation/native';
 
 const LeaveRequest = ({ employee }) => {
     const insets = useSafeAreaInsets();
@@ -18,8 +22,9 @@ const LeaveRequest = ({ employee }) => {
     const { theme } = useTheme();
     const colors = theme.colors;
     const globalStyles = GlobalStyles(colors);
+    const navigation = useNavigation();
 
-    const [loading, setLoading] = useState(true);
+    const [empCardLoading, setEmpCardLoading] = useState(true);
     const [empData, setEmpData] = useState({ empNo: '', empName: '', designation: '' });
     const [leaveType, setLeaveType] = useState('');
     const [category, setCategory] = useState('');
@@ -29,41 +34,100 @@ const LeaveRequest = ({ employee }) => {
     const [totalDays, setTotalDays] = useState('');
     const [remarks, setRemarks] = useState('');
     const [btnLoading, setBtnLoading] = useState(false);
+    const [showCameraModal, setShowCameraModal] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
+    const [matchedImage, setMatchedImage] = useState(null);
+    const [hasRecognized, setHasRecognized] = useState(false);
+    const [matchingFaceNames, setMatchingFaceNames] = useState([]);
+    const [cleanedMatchNames, setCleanedMatchNames] = useState([]);
+    const [groupedData, setgroupedData] = useState([]);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [recogloading, setrecogLoading] = useState(false);
+    const [base64Img, setBase64Img] = useState(null);
+
+    const userEmail = userData.userEmail;
+    const userName = userData.userName;
+    const deviceId = userData.androidID;
+    const clientURL = userData.clientURL;
+    const userDomain = userData.userDomain;
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [])
+        setShowCameraModal(true);
+    }, []);
 
     useEffect(() => {
-        const fetchEmployeeData = async () => {
-            try {
-                const GetMatched_EmpParameter = {
-                    EmpNo: userData.userEmployeeNo
-                };
+        if (capturedImage && !hasRecognized) {
+            handleImageRecognition();
+            setHasRecognized(true);
+        }
+    }, [capturedImage, hasRecognized]);
 
-                const GetMatched_EmpList = await callSoapService(userData.clientURL, 'Get_Emp_BasicInfo', GetMatched_EmpParameter);
+    useEffect(() => {
+        if (errorMessage) {
+            Alert.alert('Error', errorMessage, [
+                { text: 'OK', onPress: () => setErrorMessage('') }
+            ]);
+        }
+    }, [errorMessage]);
 
-                const employee = GetMatched_EmpList[0];
+    useEffect(() => {
+        if (groupedData && groupedData.length > 0) {
+            const hasNonMatchedFaces = groupedData.some(item => item.title === "Non-Matched Employee");
 
-                if (employee) {
-                    setEmpData({
-                        empNo: employee.EMP_NO || '',
-                        empName: employee.EMP_NAME || '',
-                        designation: employee.DESIGNATION || '',
-                    });
+            if (hasNonMatchedFaces) {
+                setEmpData(null);
+                setMatchedImage(null);
+                navigation.navigate('FailureAnimationScreen', {
+                    message: 'No Employee Image Matched',
+                    details: 'Next employee please',
+                    returnTo: 'SelfCheckin'
+                });
+            } else {
+                const extractedEmpNos = groupedData.flatMap(item => item.data.map(i => i.EMP_NO));
+
+                if (extractedEmpNos.length > 0) {
+                    const imageUrl = `http://103.168.19.35:8070/api/EncodeImgToNpy/view?DomainName=${userDomain}&EmpNo=${extractedEmpNos[0]}`;
+                    console.log('Generated matched image URL:', imageUrl);
+
+                    setMatchedImage(imageUrl);
                 }
-            } catch (error) {
-                console.error('Error fetching employee data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
 
-        fetchEmployeeData();
-    }, [employee]);
+                setEmpData({
+                    empNo: groupedData[0].data[0].EMP_NO,
+                    empName: groupedData[0].data[0].EMP_NAME,
+                    designation: groupedData[0].data[0].DESIGNATION,
+                });
+            }
+            setEmpCardLoading(false); // stop loading after employee data is set
+        }
+    }, [groupedData]);
+
+    const handleImageRecognition = async () => {
+        await ImageRecognition(
+            capturedImage,
+            userEmail,
+            userDomain,
+            userName,
+            deviceId,
+            clientURL,
+            setrecogLoading,
+            setBase64Img,
+            setMatchingFaceNames,
+            setCleanedMatchNames,
+            setgroupedData,
+            setErrorMessage);
+    };
+
+    const resetFaceStates = () => {
+        setCapturedImage(null);
+        setMatchingFaceNames([]);
+        setCleanedMatchNames([]);
+        setgroupedData([]);
+        setMatchedImage(null);
+        setEmpData(null);
+        setErrorMessage('');
+        setHasRecognized(false);
+    };
 
     const onLeaveSelect = (leaveType) => {
         setLeaveType(leaveType.LEAVE_TYPE);
@@ -78,17 +142,6 @@ const LeaveRequest = ({ employee }) => {
     const [startDateObj, setStartDateObj] = useState(new Date());
     const [endDateObj, setEndDateObj] = useState(new Date());
 
-    const formatDate = (date) => {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-    };
-
-    const formatDateForAPI = (date) => {
-        return date.toISOString();
-    };
-
     const calculateDays = (start, end) => {
         if (start && end) {
             const timeDiff = end.getTime() - start.getTime();
@@ -102,7 +155,6 @@ const LeaveRequest = ({ employee }) => {
         if (selectedDate) {
             setStartDateObj(selectedDate);
             setStartDate(formatDate(selectedDate));
-            calculateDays(selectedDate, endDateObj);
         }
     };
 
@@ -133,13 +185,19 @@ const LeaveRequest = ({ employee }) => {
 
         try {
             const leaveData = {
+                COMPANY_CODE: userData.companyCode,
+                BRANCH_CODE: userData.branchCode,
+                REF_NO: -1,
+                EMP_NO: empData.empNo,
                 LEAVE_TYPE: leaveType,
-                LEAVE_CATEGORY: category || 'General', // Default category if none selected
-                START_DATE: formatDateForAPI(startDateObj),
-                END_DATE: formatDateForAPI(endDateObj),
+                LEAVE_CATEGORY: category || ' ',
+                START_DATE: startDate,
+                END_DATE: endDate,
                 NO_OF_DAYS: totalDays,
                 EMP_REMARKS: remarks,
-                EMP_NO: empData.empNo, // Make sure to include employee number
+                EMP_NO: empData.empNo,
+                USER_NAME: userData.userName,
+                ENT_DATE: formatDate(new Date()),
             };
 
             const convertedDataModel = convertDataModelToStringData(
@@ -158,7 +216,9 @@ const LeaveRequest = ({ employee }) => {
                 leaveRequest_Parameter
             );
 
-            if (response) {
+            const refNo = response.match(/\d+/)[0];
+
+            if (response === `Successfully Saved with Ref No '${refNo}'`) {
                 alert('Leave request submitted successfully');
                 // Reset form
                 setLeaveType('');
@@ -170,6 +230,7 @@ const LeaveRequest = ({ employee }) => {
                 // Reset date objects to current date
                 setStartDateObj(new Date());
                 setEndDateObj(new Date());
+                resetFaceStates();
             }
         } catch (error) {
             console.error('Error saving leave request:', error);
@@ -187,39 +248,51 @@ const LeaveRequest = ({ employee }) => {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={globalStyles.centerRoundImgContainer}>
-                        <View style={globalStyles.centerRoundImg}>
-                            <Image
-                                source={{ uri: `data:image/jpeg;base64,${userData.userAvatar}` }}
-                                style={globalStyles.roundImg}
-                            />
-                        </View>
+                    <View style={globalStyles.justalignCenter}>
+                        {empCardLoading ? (
+                            <ActivityIndicator size="large" color={colors.primary} />
+                        ) : (
+                            <View style={globalStyles.centerRoundImg}>
+                                <Image
+                                    source={{ uri: matchedImage }}
+                                    style={globalStyles.roundImg}
+                                />
+                            </View>
+                        )}
                     </View>
 
-                    <Card style={[globalStyles.summaryCard, { backgroundColor: colors.card }]}>
-                        <Card.Content>
-                            <View style={globalStyles.summaryRow}>
-                                <View style={globalStyles.summaryItem}>
-                                    <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp No</Text>
-                                    <Text style={[globalStyles.subtitle_2, globalStyles.txt_center, { color: colors.primary }]}>{empData.empNo || 'N/A'}</Text>
+                    {empCardLoading ? (
+                        <Card style={[globalStyles.summaryCard, { backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', height: 150 }]}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                        </Card>
+                    ) : (
+                        <Card style={[globalStyles.summaryCard, { backgroundColor: colors.card }]}>
+                            <Card.Content>
+                                <View style={globalStyles.summaryRow}>
+                                    <View style={globalStyles.summaryItem}>
+                                        <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp No</Text>
+                                        <Text style={[globalStyles.subtitle_2, globalStyles.txt_center, { color: colors.primary }]}>
+                                            {empData?.empNo || 'N/A'}
+                                        </Text>
+                                    </View>
+                                    <View style={globalStyles.summaryItem}>
+                                        <Text style={[globalStyles.content1, globalStyles.txt_center]}>Designation</Text>
+                                        <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>
+                                            {empData?.designation || 'N/A'}
+                                        </Text>
+                                    </View>
                                 </View>
-
                                 <View style={globalStyles.summaryItem}>
-                                    <Text style={[globalStyles.content1, globalStyles.txt_center]}>Designation</Text>
-                                    <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>{empData.designation || 'N/A'}</Text>
+                                    <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp Name</Text>
+                                    <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>
+                                        {empData?.empName || 'N/A'}
+                                    </Text>
                                 </View>
-                            </View>
+                            </Card.Content>
+                        </Card>
+                    )}
 
-                            <View style={globalStyles.summaryItem}>
-                                <Text style={[globalStyles.content1, globalStyles.txt_center]}>Emp Name</Text>
-                                <Text style={[globalStyles.subtitle_2, globalStyles.txt_center]}>
-                                    {empData.empName || 'N/A'}
-                                </Text>
-                            </View>
-                        </Card.Content>
-                    </Card>
-
-                    <Text style={[globalStyles.subtitle_1]}>Leave application</Text>
+                    <Text style={[globalStyles.subtitle, globalStyles.mb_5]}>Leave application</Text>
 
                     <View style={globalStyles.flex_1}>
                         {/* Leave Type Dropdown */}
@@ -231,13 +304,12 @@ const LeaveRequest = ({ employee }) => {
                                 editable={false}
                                 theme={theme}
                                 right={<TextInput.Icon color={colors.text} icon="chevron-down" />}
-                                style={globalStyles.container1}
                                 onPress={() => setLeaveTypeVisible(true)}
                                 pointerEvents="none"
                             />
                         </TouchableOpacity>
 
-                        <Text style={[globalStyles.subtitle_2, { marginTop: 10 }]}>Select Category</Text>
+                        <Text style={[globalStyles.subtitle_2, globalStyles.mt_5]}>Select Category</Text>
 
                         <CategoryListPopUp
                             onSelect={(category) => {
@@ -248,7 +320,7 @@ const LeaveRequest = ({ employee }) => {
                         />
 
                         {/* Date Inputs */}
-                        <View style={[globalStyles.twoInputContainer, globalStyles.mb_10]}>
+                        <View style={[globalStyles.twoInputContainer, { columnGap: 3 }, globalStyles.mb_5]}>
                             <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={globalStyles.flex_1}>
                                 <TextInput
                                     mode="outlined"
@@ -256,7 +328,7 @@ const LeaveRequest = ({ employee }) => {
                                     value={startDate}
                                     editable={false}
                                     theme={theme}
-                                    style={globalStyles.container1}
+                                    style={globalStyles.container2}
                                     placeholder="DD/MM/YYYY"
                                     right={<TextInput.Icon color={colors.text} icon="calendar" onPress={() => setShowStartDatePicker(true)} />}
                                     pointerEvents="none"
@@ -285,16 +357,15 @@ const LeaveRequest = ({ employee }) => {
                             value={totalDays}
                             theme={theme}
                             editable={false}
-                            style={[globalStyles.container2, globalStyles.mb_10, { width: '70%' }]}
+                            style={{ width: '70%' }}
                         />
 
                         <TextInput
                             multiline
                             mode="outlined"
                             label="Enter EMP_REMARKS"
-                            style={globalStyles.container1}
                             theme={theme}
-                            numberOfLines={4}
+                            numberOfLines={3}
                             value={remarks}
                             onChangeText={setRemarks}
                         />
@@ -309,6 +380,17 @@ const LeaveRequest = ({ employee }) => {
                         setLeaveTypeVisible(false);
                     }}
                 />
+
+                {showCameraModal && (
+                    <AutoImageCaptureModal
+                        visible={showCameraModal}
+                        onClose={() => setShowCameraModal(false)}
+                        onCapture={(imagePath) => {
+                            setCapturedImage(imagePath);
+                            console.log('Captured image URI local:', capturedImage);
+                        }}
+                    />
+                )}
 
                 {/* Date Pickers */}
                 {showStartDatePicker && (
@@ -339,7 +421,7 @@ const LeaveRequest = ({ employee }) => {
                         theme={{
                             colors: {
                                 primary: colors.primary,
-                                disabled: colors.lightGray, // <- set your desired disabled color
+                                disabled: colors.lightGray,
                             },
                         }}
                         loading={btnLoading}

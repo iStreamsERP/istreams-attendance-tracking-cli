@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, StyleSheet, Platform } from 'react-native';
+import { Modal, View, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from 'react-native-paper';
 import { formatDate } from '../Utils/dataTimeUtils';
@@ -30,7 +30,6 @@ const CustomDatePicker = ({ visible, onClose, onDateSelected }) => {
                 mode="date"
                 display="default"
                 onChange={handleChange}
-                style={styles.datePicker}
             />
         ) : null;
     }
@@ -56,14 +55,3 @@ const CustomDatePicker = ({ visible, onClose, onDateSelected }) => {
 };
 
 export default CustomDatePicker;
-
-const styles = StyleSheet.create({
-    datePicker: {
-        marginVertical: 10,
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 15,
-    },
-});

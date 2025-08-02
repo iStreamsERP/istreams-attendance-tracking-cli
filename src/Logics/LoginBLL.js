@@ -65,6 +65,8 @@ export const loginBLL = async (username, password, login) => {
 
                     const android = await DeviceInfo.getUniqueId();
 
+                    const domain = username.split('@')[1].split('.')[0];
+
                     const payload = {
                         companyCode: Client_companyCode,
                         branchCode: Client_branchCode,
@@ -74,7 +76,8 @@ export const loginBLL = async (username, password, login) => {
                         userAvatar: userImage,
                         clientURL: Public_GetServiceURL,
                         companyName: Client_companyName,
-                        androidID: android
+                        androidID: android,
+                        userDomain: domain
                     };
 
                     login(payload);

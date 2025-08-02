@@ -1,6 +1,7 @@
 import { Platform, Alert } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { launchCamera } from 'react-native-image-picker';
+import ImageResizer from 'react-native-image-resizer';
 
 export const handlePickImageOptimized = async (setCapturedImage) => {
     // Check available memory before proceeding (Android)
@@ -26,6 +27,7 @@ export const handlePickImageOptimized = async (setCapturedImage) => {
     const options = {
         mediaType: 'photo',
         includeBase64: false,
+        includeExtra: true,
         quality: 1.0,
         maxWidth: 600,
         maxHeight: 600,
@@ -56,7 +58,16 @@ export const handlePickImageOptimized = async (setCapturedImage) => {
 
         const asset = result.assets?.[0];
         if (asset?.uri) {
-            setCapturedImage(asset.uri);
+            const rotated = await ImageResizer.createResizedImage(
+                asset.uri,
+                600,
+                600,
+                'JPEG',
+                100,
+                0,   // auto rotates based on EXIF
+            );
+            setCapturedImage(rotated.uri);
+            //setCapturedImage(asset.uri);
         }
     } catch (error) {
         console.error('Camera launch error:', error);

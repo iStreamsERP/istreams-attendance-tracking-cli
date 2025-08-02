@@ -134,12 +134,12 @@ const LoanRequest = ({ employee }) => {
         try {
             const leaveData = {
                 LOAN_TYPE: loanType,
-                LEAVE_CATEGORY: category || 'General', // Default category if none selected
+                LEAVE_CATEGORY: category || 'General', 
                 START_DATE: formatDateForAPI(startDateObj),
                 END_DATE: formatDateForAPI(endDateObj),
                 NO_OF_DAYS: totalDays,
                 EMP_REMARKS: remarks,
-                EMP_NO: empData.empNo, // Make sure to include employee number
+                EMP_NO: empData.empNo, 
             };
 
             const convertedDataModel = convertDataModelToStringData(
@@ -187,7 +187,7 @@ const LoanRequest = ({ employee }) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ flexGrow: 1 }}
             >
-                <View style={globalStyles.centerRoundImgContainer}>
+                <View style={globalStyles.justalignCenter}>
                     <View style={globalStyles.centerRoundImg}>
                         <Image
                             source={{ uri: `data:image/jpeg;base64,${userData.userAvatar}` }}
@@ -373,7 +373,7 @@ const LoanRequest = ({ employee }) => {
                     theme={{
                         colors: {
                             primary: colors.primary,
-                            disabled: colors.lightGray, // <- set your desired disabled color
+                            disabled: colors.lightGray, 
                         },
                     }}
                     loading={btnLoading}
